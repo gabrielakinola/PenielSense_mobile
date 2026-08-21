@@ -1,18 +1,18 @@
 {
   "expo": {
-    "name": "Penielsense",
-    "slug": "penielsense",
+    "name": "Peniel Care",
+    "slug": "peniel-care",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "penielsense",
+    "scheme": "penielcare",
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "uk.co.penielsense.app"
+      "bundleIdentifier": "com.peniel.penielcare"
     },
     "android": {
-      "package": "uk.co.penielsense.app",
+      "package": "com.peniel.penielcare",
       "adaptiveIcon": {
         "backgroundColor": "#070B14",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -43,7 +43,7 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "294e922a-ec23-4080-8fd7-d39dc801381b"
+        "projectId": "96742f5d-8ab1-4574-b264-7e91f057795b"
       }
     },
     "owner": "temmygs-team"
