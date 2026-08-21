@@ -1,20 +1,21 @@
 {
   "expo": {
-    "name": "penielsense_mobile_fe",
-    "slug": "penielsense_mobile_fe",
+    "name": "Penielsense",
+    "slug": "penielsense",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "penielsensemobilefe",
+    "scheme": "penielsense",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "uk.co.penielsense.app"
     },
     "android": {
+      "package": "uk.co.penielsense.app",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#070B14",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false
@@ -29,14 +30,22 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
+          "image": "./assets/images/peniel_logo_p.png",
+          "imageWidth": 120,
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff"
+          "backgroundColor": "#070B14"
         }
       ]
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "294e922a-ec23-4080-8fd7-d39dc801381b"
+      }
+    },
+    "owner": "temmygs-team"
   }
 }
