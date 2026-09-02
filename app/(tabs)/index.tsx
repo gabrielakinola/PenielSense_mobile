@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { RefreshControl, View } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
@@ -15,6 +15,7 @@ import { getCareHomeDashboardStats } from '@/src/services/dashboard.api';
 import { getCareHomeReviewFlags } from '@/src/services/review-flags.api';
 import { normalizeApiError } from '@/src/lib/api-client';
 import { useAuthStore } from '@/src/stores/auth-store';
+import { isCareHomeManagerRole } from '@/src/lib/care-home-home';
 import { useThemeColors } from '@/src/hooks/use-theme-colors';
 
 const POLL_MS = 60_000;
@@ -26,6 +27,12 @@ export default function TodayScreen() {
   const user = useAuthStore((s) => s.user);
   const careHome = useAuthStore((s) => s.careHome);
   const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    if (!isCareHomeManagerRole(user?.role)) {
+      router.replace('/(tabs)/residents');
+    }
+  }, [router, user?.role]);
 
   const statsQuery = useQuery({
     queryKey: ['carehome', 'dashboard', 'stats'],

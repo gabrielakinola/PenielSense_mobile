@@ -20,6 +20,7 @@ import { AnimatedButton } from '@/src/components/ui/AnimatedButton';
 import { useThemeColors } from '@/src/hooks/use-theme-colors';
 import { useResolvedTheme } from '@/src/theme/theme-provider';
 import { useAuthStore, useAuthHydrated } from '@/src/stores/auth-store';
+import { careHomeTabsHref } from '@/src/lib/care-home-home';
 import { normalizeApiError } from '@/src/lib/api-client';
 import { radius } from '@/src/theme/radius';
 import { typography } from '@/src/theme/typography';
@@ -32,12 +33,13 @@ export default function LoginScreen() {
   const login = useAuthStore((s) => s.login);
   const hydrated = useAuthHydrated();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const role = useAuthStore((s) => s.user?.role);
 
   useEffect(() => {
     if (hydrated && isAuthenticated) {
-      router.replace('/(tabs)');
+      router.replace(careHomeTabsHref(role));
     }
-  }, [hydrated, isAuthenticated, router]);
+  }, [hydrated, isAuthenticated, role, router]);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -56,7 +58,7 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       await login(email, password);
-      router.replace('/(tabs)');
+      router.replace(careHomeTabsHref(useAuthStore.getState().user?.role));
     } catch (err) {
       setError(normalizeApiError(err));
     } finally {

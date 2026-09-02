@@ -53,10 +53,7 @@ export default function RootLayout() {
           <Stack.Screen
             name="residents/[id]"
             options={{
-              headerShown: true,
-              title: 'Resident',
-              headerBackTitle: 'Back',
-              presentation: 'card',
+              headerShown: false,
             }}
           />
         </Stack>

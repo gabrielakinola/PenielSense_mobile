@@ -12,10 +12,20 @@
       "distribution": "internal"
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://api.penielsense.co.uk/api"
+      }
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "ios": {
+        "ascAppId": "6803858565",
+        "ascApiKeyPath": "./secrets/AuthKey_A477VF626Z.p8",
+        "ascApiKeyId": "A477VF626Z",
+        "ascApiKeyIssuerId": "6e6932c8-df06-4bcf-8e23-c551587ca22b"
+      }
+    }
   }
 }
