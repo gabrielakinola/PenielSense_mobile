@@ -33,13 +33,21 @@ export function normalizeApiError(error: unknown): string {
         return String(data.errors[0]);
       }
       if ('message' in data && typeof data.message === 'string') {
+        if (/^Cannot (GET|POST|PUT|PATCH|DELETE) /i.test(data.message)) {
+          return 'Not found';
+        }
         return data.message;
       }
     }
 
     if (error.response?.status === 401) return 'Invalid credentials';
     if (error.response?.status === 404) return 'Not found';
-    if (!error.response) return 'Server unavailable. Please try again.';
+    if (error.response?.status && error.response.status >= 500) {
+      return `Server error (${error.response.status})`;
+    }
+    if (!error.response) {
+      return 'Server unavailable. Please try again.';
+    }
     return 'An unexpected error occurred';
   }
 

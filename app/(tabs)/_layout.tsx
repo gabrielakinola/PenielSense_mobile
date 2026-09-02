@@ -10,6 +10,11 @@ import { useHaptics } from '@/src/hooks/use-haptics';
 import { typography } from '@/src/theme/typography';
 import { MIN_TOUCH_TARGET } from '@/src/constants/app';
 import { useAuthStore, useAuthHydrated } from '@/src/stores/auth-store';
+import {
+  CARER_TAB_ORDER,
+  MANAGER_TAB_ORDER,
+  isCareHomeManagerRole,
+} from '@/src/lib/care-home-home';
 
 const TAB_CONFIG = [
   { name: 'index', title: 'Today', icon: Home },
@@ -101,6 +106,16 @@ function CustomTabBar({ state, descriptors, navigation }: TabBarProps) {
   const colors = useThemeColors();
   const insets = useSafeAreaInsets();
   const { selection } = useHaptics();
+  const role = useAuthStore((s) => s.user?.role);
+  const order = isCareHomeManagerRole(role) ? MANAGER_TAB_ORDER : CARER_TAB_ORDER;
+  const allowed = new Set<string>(order);
+  const routes = [...state.routes]
+    .filter((route) => allowed.has(route.name))
+    .sort(
+      (a, b) =>
+        (order as readonly string[]).indexOf(a.name) -
+        (order as readonly string[]).indexOf(b.name),
+    );
 
   return (
     <View
@@ -113,11 +128,11 @@ function CustomTabBar({ state, descriptors, navigation }: TabBarProps) {
         paddingTop: 8,
       }}
     >
-      {state.routes.map((route, index) => {
+      {routes.map((route) => {
         const config = TAB_CONFIG.find((t) => t.name === route.name);
         if (!config) return null;
 
-        const focused = state.index === index;
+        const focused = state.routes[state.index]?.key === route.key;
         const { options } = descriptors[route.key];
 
         const onPress = () => {
@@ -152,6 +167,8 @@ export default function TabLayout() {
   const router = useRouter();
   const hydrated = useAuthHydrated();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const role = useAuthStore((s) => s.user?.role);
+  const isManager = isCareHomeManagerRole(role);
 
   useEffect(() => {
     if (hydrated && !isAuthenticated) {
@@ -165,13 +182,20 @@ export default function TabLayout() {
 
   return (
     <Tabs
+      initialRouteName={isManager ? 'index' : 'residents'}
       tabBar={(props) => <CustomTabBar {...props} />}
       screenOptions={{
         // Ticketmaster pattern: no native header — screens own a compact header.
         headerShown: false,
       }}
     >
-      <Tabs.Screen name="index" options={{ title: 'Today' }} />
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: 'Today',
+          href: isManager ? undefined : null,
+        }}
+      />
       <Tabs.Screen name="residents" options={{ title: 'Residents' }} />
       <Tabs.Screen name="flags" options={{ title: 'Review Flags' }} />
       <Tabs.Screen name="handovers" options={{ title: 'Handovers' }} />

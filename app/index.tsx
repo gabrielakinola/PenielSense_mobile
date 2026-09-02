@@ -14,6 +14,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { PenielLogo } from '@/src/components/brand/PenielLogo';
 import { useAuthStore, useAuthHydrated } from '@/src/stores/auth-store';
+import { careHomeTabsHref } from '@/src/lib/care-home-home';
 import { useResolvedTheme } from '@/src/theme/theme-provider';
 import { lightColors, darkColors } from '@/src/theme/colors';
 
@@ -67,6 +68,7 @@ export default function SplashScreen() {
   const theme = useResolvedTheme();
   const hydrated = useAuthHydrated();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const role = useAuthStore((s) => s.user?.role);
   const palette = theme === 'dark' ? darkColors : lightColors;
   const startedAt = useRef(Date.now());
 
@@ -78,14 +80,14 @@ export default function SplashScreen() {
 
     const timer = setTimeout(() => {
       if (isAuthenticated) {
-        router.replace('/(tabs)');
+        router.replace(careHomeTabsHref(role));
       } else {
         router.replace('/login');
       }
     }, remaining);
 
     return () => clearTimeout(timer);
-  }, [hydrated, isAuthenticated, router]);
+  }, [hydrated, isAuthenticated, role, router]);
 
   return (
     <View style={[styles.root, { backgroundColor: palette.background }]}>
