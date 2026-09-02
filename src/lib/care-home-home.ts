@@ -15,6 +15,7 @@ export function careHomeTabsHref(role?: string | null): "/(tabs)" | "/(tabs)/res
 
 export const CARER_TAB_ORDER = [
   "residents",
+  "tasks",
   "flags",
   "handovers",
   "profile",

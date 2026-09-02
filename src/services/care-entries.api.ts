@@ -8,6 +8,7 @@ import type {
   QueryCareEntriesParams,
   UpdateCareEntryPayload,
 } from '@/src/types/care-entry.types';
+import { cachedOnlineFirst, queueWhenOffline } from '@/src/offline/offline-api';
 
 function careEntriesPath(residentId: string) {
   return `/carehome/residents/${residentId}/care-entries`;
@@ -24,20 +25,28 @@ export async function createCareEntry(
   residentId: string,
   payload: CreateCareEntryPayload,
 ) {
-  const { data } = await careHomeApiClient.post<
-    ApiSuccessEnvelope<CareEntryDto>
-  >(careEntriesPath(residentId), payload);
-  return data.data;
+  const url = careEntriesPath(residentId);
+  let saved: CareEntryDto | null = null;
+  const result = await queueWhenOffline('POST', url, payload, async (requestPayload, requestId) => {
+    const response = await careHomeApiClient.post<ApiSuccessEnvelope<CareEntryDto>>(url, requestPayload, { headers: { 'Idempotency-Key': requestId } });
+    saved = response.data.data;
+  });
+  return { saved, ...result };
 }
 
 export async function getCareEntries(
   residentId: string,
   params?: QueryCareEntriesParams,
 ) {
-  const { data } = await careHomeApiClient.get<
-    ApiSuccessEnvelope<CareEntryListResult>
-  >(careEntriesPath(residentId), { params });
-  return data.data;
+  return cachedOnlineFirst(
+    `care-entries:${residentId}:${JSON.stringify(params ?? {})}`,
+    async () => {
+      const { data } = await careHomeApiClient.get<
+        ApiSuccessEnvelope<CareEntryListResult>
+      >(careEntriesPath(residentId), { params });
+      return data.data;
+    },
+  );
 }
 
 export async function updateCareEntry(
@@ -45,12 +54,25 @@ export async function updateCareEntry(
   entryId: string,
   payload: UpdateCareEntryPayload,
 ) {
-  const { data } = await careHomeApiClient.patch<
-    ApiSuccessEnvelope<CareEntryDto>
-  >(`${careEntriesPath(residentId)}/${entryId}`, payload);
-  return data.data;
+  const url = `${careEntriesPath(residentId)}/${entryId}`;
+  let saved: CareEntryDto | null = null;
+  const result = await queueWhenOffline('PATCH', url, payload, async (requestPayload, requestId) => {
+    const response = await careHomeApiClient.patch<ApiSuccessEnvelope<CareEntryDto>>(url, requestPayload, { headers: { 'Idempotency-Key': requestId } });
+    saved = response.data.data;
+  });
+  return { saved, ...result };
 }
 
-export async function deleteCareEntry(residentId: string, entryId: string) {
-  await careHomeApiClient.delete(`${careEntriesPath(residentId)}/${entryId}`);
+export async function deleteCareEntry(
+  residentId: string,
+  entryId: string,
+  reason = 'Voided by staff after reviewing the care entry',
+) {
+  const url = `${careEntriesPath(residentId)}/${entryId}`;
+  return queueWhenOffline('DELETE', url, { reason }, async (requestPayload, requestId) => {
+    await careHomeApiClient.delete(url, {
+      data: requestPayload,
+      headers: { 'Idempotency-Key': requestId },
+    });
+  });
 }

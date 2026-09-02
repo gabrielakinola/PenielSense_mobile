@@ -38,6 +38,13 @@
           "resizeMode": "contain",
           "backgroundColor": "#070B14"
         }
+      ],
+      "expo-secure-store",
+      [
+        "expo-sqlite",
+        {
+          "useSQLCipher": true
+        }
       ]
     ],
     "experiments": {

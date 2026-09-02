@@ -41,9 +41,9 @@ export function CareEntryPanel({ residentId }: CareEntryPanelProps) {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (entryId: string) => deleteCareEntry(residentId, entryId),
-    onSuccess: async (_data, entryId) => {
-      if (editingEntry?.id === entryId) setEditingEntry(null);
+    mutationFn: ({ entryId, reason }: { entryId: string; reason: string }) => deleteCareEntry(residentId, entryId, reason),
+    onSuccess: async (_data, variables) => {
+      if (editingEntry?.id === variables.entryId) setEditingEntry(null);
       await queryClient.invalidateQueries({
         queryKey: ['carehome', 'care-entries', residentId],
       });
@@ -56,6 +56,23 @@ export function CareEntryPanel({ residentId }: CareEntryPanelProps) {
   const latest = latestQuery.data?.items[0] ?? null;
   const total = latestQuery.data?.pagination.total ?? 0;
   const isFetching = latestQuery.isFetching;
+  const requestVoid = (entry: CareEntryDto) => {
+    Alert.prompt(
+      'Void this care note?',
+      'The original remains in the audit history. Enter the reason it must no longer appear as a current record.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Void note', style: 'destructive', onPress: (reason?: string) => {
+          if ((reason ?? '').trim().length < 3) {
+            Alert.alert('Reason required', 'Enter a brief reason for voiding this note.');
+            return;
+          }
+          deleteMutation.mutate({ entryId: entry.id, reason: reason!.trim() });
+        } },
+      ],
+      'plain-text',
+    );
+  };
 
   return (
     <Card style={{ marginBottom: 16 }}>
@@ -171,7 +188,7 @@ export function CareEntryPanel({ residentId }: CareEntryPanelProps) {
               canMutate={canCreate}
               isEditing={editingEntry?.id === latest.id}
               onEdit={setEditingEntry}
-              onDelete={(entry) => deleteMutation.mutate(entry.id)}
+              onDelete={requestVoid}
             />
           </View>
         )}

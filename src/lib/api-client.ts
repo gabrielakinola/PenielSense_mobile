@@ -8,9 +8,11 @@ import type { ApiErrorEnvelope } from '@/src/types/auth.types';
 import {
   getAccessToken,
   notifyUnauthorized,
+  refreshAccessToken,
 } from '@/src/lib/auth-token';
 
 const DEFAULT_BASE_URL = 'http://localhost:3000/api';
+let refreshPromise: Promise<string | null> | null = null;
 
 function resolveApiBaseUrl() {
   const fromEnv =
@@ -83,10 +85,20 @@ function createApiClient(options?: {
   if (options?.withSessionExpiry) {
     client.interceptors.response.use(
       (response) => response,
-      (error: AxiosError<ApiErrorEnvelope>) => {
+      async (error: AxiosError<ApiErrorEnvelope>) => {
         const status = error.response?.status;
         const url = error.config?.url;
-        if (status === 401 && !isAuthLoginRequest(url)) {
+        const config = error.config as (InternalAxiosRequestConfig & { _sessionRetried?: boolean }) | undefined;
+        if (status === 401 && !isAuthLoginRequest(url) && config && !config._sessionRetried) {
+          config._sessionRetried = true;
+          refreshPromise ??= refreshAccessToken().finally(() => {
+            refreshPromise = null;
+          });
+          const token = await refreshPromise;
+          if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+            return client.request(config);
+          }
           notifyUnauthorized();
         }
         return Promise.reject(error);

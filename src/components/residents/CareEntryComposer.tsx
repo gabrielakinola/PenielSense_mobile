@@ -59,6 +59,7 @@ export function CareEntryComposer({
   const [usedOpenAI, setUsedOpenAI] = useState(false);
   const [model, setModel] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
+  const [changeReason, setChangeReason] = useState('');
 
   const nextKey = () => {
     keySeq.current += 1;
@@ -86,12 +87,14 @@ export function CareEntryComposer({
     setModel(null);
     setStep('compose');
     setFormError(null);
+    setChangeReason('');
     onCancelEdit?.();
   };
 
   useEffect(() => {
     if (!editingEntry) return;
     setFormError(null);
+    setChangeReason('');
     setRawText(editingEntry.rawText);
     setDraftItems(
       editingEntry.confirmedItems.map((item) => ({
@@ -159,6 +162,7 @@ export function CareEntryComposer({
           category: item.category,
           summary: item.summary.trim(),
         })),
+        changeReason: changeReason.trim(),
       });
     },
     onSuccess: async () => {
@@ -174,12 +178,13 @@ export function CareEntryComposer({
 
   const canExtract = rawText.trim().length >= 3 && !extractMutation.isPending;
   const saving = saveMutation.isPending || updateMutation.isPending;
+  const editingId = editingEntry?.id ?? null;
   const canSave =
     rawText.trim().length > 0 &&
     draftItems.length > 0 &&
     draftItems.every((item) => item.summary.trim().length > 0) &&
+    (!editingId || changeReason.trim().length >= 3) &&
     !saving;
-  const editingId = editingEntry?.id ?? null;
 
   if (!canCreate) {
     return (
@@ -381,6 +386,19 @@ export function CareEntryComposer({
           </Pressable>
 
           <View style={{ gap: 8 }}>
+            {editingId ? <>
+              <Text style={{ ...typography.label, color: colors.secondary }}>
+                Reason for correction
+              </Text>
+              <TextInput
+                value={changeReason}
+                onChangeText={setChangeReason}
+                placeholder="Briefly explain what was corrected"
+                placeholderTextColor={colors.secondary}
+                maxLength={500}
+                style={{ ...inputStyle, minHeight: 56 }}
+              />
+            </> : null}
             <PrimaryAction
               label={editingId ? 'Save changes' : 'Confirm & save'}
               pending={saving}

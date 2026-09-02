@@ -76,6 +76,7 @@ export interface CreateCareEntryPayload {
 export interface UpdateCareEntryPayload {
   rawText: string;
   items: CareEntryItemDto[];
+  changeReason: string;
 }
 
 export interface QueryCareEntriesParams {

@@ -93,6 +93,55 @@ export interface ApiResidentDto {
   devices: ApiResidentDeviceDto[];
 }
 
+export type ResidentRiskLevel = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+
+export interface ResidentCareProfileDto {
+  id: string | null;
+  residentId: string;
+  preferredName: string;
+  photoUrl: string;
+  allergies: string[];
+  healthConditions: string[];
+  communicationNeeds: string;
+  mobilitySupport: string;
+  nutritionHydration: string;
+  continenceSupport: string;
+  medicationSupport: string;
+  emergencyGuidance: string;
+  gpName: string;
+  gpPractice: string;
+  aboutMe: {
+    whatMatters?: string;
+    importantPeople?: string;
+    communication?: string;
+    wellness?: string;
+    pleaseDoAndDoNot?: string;
+    howToSupportMe?: string;
+    alsoWorthKnowing?: string;
+  };
+  contacts: Array<{
+    name: string;
+    relationship: string;
+    phone?: string;
+    email?: string;
+    primary?: boolean;
+  }>;
+  risks: Array<{
+    title: string;
+    level: ResidentRiskLevel;
+    controls: string;
+    reviewDueAt?: string | null;
+  }>;
+  dnacprStatus: 'YES' | 'NO' | 'UNKNOWN';
+  capacitySummary: string;
+  consentSummary: string;
+  dolsSummary: string;
+  lastReviewedAt: string | null;
+  reviewDueAt: string | null;
+  version: number;
+  updatedAt: string | null;
+}
+
 export interface QueryResidentsParams {
   search?: string;
   status?: ApiResidentWellnessStatus;
@@ -255,4 +304,20 @@ export interface QueryHandoverParams {
   search?: string;
   sort?: 'alpha' | 'priority';
   attention?: boolean;
+}
+
+export interface ResidentEvidenceReport {
+  resident: { id: string; name: string; room: string | null; routineStatus: string };
+  period: { dateKey: string; window: HandoverShiftWindow; windowLabel: string; start: string; end: string };
+  intelligence: { summary: string; generatedAt: string; model: string };
+  supportingEvidence: { V5: string[]; Tuya: string[]; Withings: string[] };
+  timelineHighlights: Array<{ label?: string; detail?: string; time?: string }>;
+  reviewFlags: { active: ApiReviewFlagDto[]; resolved: ApiReviewFlagDto[] };
+  careContext: {
+    noteCount: number;
+    notes: Array<{ id: string; recordedAt: string; recordedBy: string; items: Array<{ category: string; summary: string }> }>;
+    tasks: Array<{ id: string; title: string; category: string; dueAt: string; status: string; outcomeNote: string }>;
+    incidents: Array<{ id: string; type: string; severity: string; occurredAt: string; description: string; immediateAction: string; safeguardingConcern: boolean; status: string }>;
+    provenance: string;
+  };
 }

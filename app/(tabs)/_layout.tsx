@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { View, Pressable, Text, Platform } from 'react-native';
 import type { ComponentProps } from 'react';
 import { Tabs, useRouter } from 'expo-router';
-import { Home, Users, Flag, ClipboardList, User } from 'lucide-react-native';
+import { Home, Users, Flag, ClipboardList, User, ListChecks } from 'lucide-react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemeColors } from '@/src/hooks/use-theme-colors';
@@ -19,6 +19,7 @@ import {
 const TAB_CONFIG = [
   { name: 'index', title: 'Today', icon: Home },
   { name: 'residents', title: 'Residents', icon: Users },
+  { name: 'tasks', title: 'Tasks', icon: ListChecks },
   { name: 'flags', title: 'Flags', icon: Flag },
   { name: 'handovers', title: 'Handover', icon: ClipboardList },
   { name: 'profile', title: 'Profile', icon: User },
@@ -197,7 +198,11 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen name="residents" options={{ title: 'Residents' }} />
-      <Tabs.Screen name="flags" options={{ title: 'Review Flags' }} />
+      <Tabs.Screen
+        name="tasks"
+        options={{ title: 'Tasks', href: isManager ? null : undefined }}
+      />
+      <Tabs.Screen name="flags" options={{ title: isManager ? 'Review' : 'Flags' }} />
       <Tabs.Screen name="handovers" options={{ title: 'Handovers' }} />
       <Tabs.Screen name="profile" options={{ title: 'Profile' }} />
     </Tabs>

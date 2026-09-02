@@ -14,3 +14,10 @@ export async function loginCareHome(credentials: CareHomeLoginDto) {
   });
   return data.data;
 }
+
+export async function refreshCareHomeSession(refreshToken: string) {
+  const { data } = await authApiClient.post<
+    ApiSuccessEnvelope<{ accessToken: string; refreshToken: string }>
+  >('/auth/carehome/refresh', { refreshToken });
+  return data.data;
+}
