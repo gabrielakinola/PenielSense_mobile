@@ -19,3 +19,24 @@ export interface CarePlanDto {
   approvedAt: string | null;
   updatedAt: string | null;
 }
+export interface CarePlanRecommendation {
+  id: string;
+  residentId: string;
+  category: string;
+  title: string;
+  reason: string;
+  evidence: string[];
+  nextStep: string;
+  currentPlanHasSection: boolean;
+}
+export interface CarePlanRecommendationsDto {
+  generatedAt: string;
+  recommendations: CarePlanRecommendation[];
+}
+export interface GeneratedCarePlanDraftDto {
+  residentId: string;
+  generatedAt: string;
+  status: 'DRAFT';
+  sections: CarePlanSectionDto[];
+  notice: string;
+}

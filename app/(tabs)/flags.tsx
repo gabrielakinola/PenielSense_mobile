@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { FlatList, RefreshControl, Text, View } from 'react-native';
+import { FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { AlertTriangle, Flag, ShieldAlert } from 'lucide-react-native';
@@ -144,22 +144,29 @@ export default function FlagsScreen() {
                       </View>
                     </Card>
                   ) : null}
-                  {reviewQuery.data.careTasks.slice(0, 3).map((task) => (
-                    <Card key={task.id} style={{ borderLeftWidth: 3, borderLeftColor: task.status === 'PENDING' || task.status === 'ESCALATED' ? colors.status.critical : colors.status.watch }}>
+                  {reviewQuery.data.carePlansDue.map((plan) => (
+                    <Pressable key={plan.id} onPress={() => router.push(`/residents/${plan.residentId}/care-plan`)}><Card style={{ borderLeftWidth: 3, borderLeftColor: colors.status.watch }}><Text style={{ ...typography.label, color: colors.secondary }}>CARE PLAN REVIEW DUE</Text><Text style={{ ...typography.bodyMedium, color: colors.text, marginTop: 4 }}>Review due {plan.reviewDueAt ? new Date(plan.reviewDueAt).toLocaleDateString() : 'soon'}</Text><Text style={{ ...typography.caption, color: colors.primary, marginTop: 8 }}>Open care plan and intelligence evidence</Text></Card></Pressable>
+                  ))}
+                  {reviewQuery.data.careTasks.map((task) => (
+                    <Pressable key={task.id} onPress={() => router.push({ pathname: '/manager-action', params: { sourceType: 'CARE_TASK', sourceId: task.id, residentId: task.residentId, title: task.title, status: task.workflow?.status ?? 'NEW', assignedTo: task.workflow?.assignedTo ?? '', actionTaken: task.workflow?.actionTaken ?? '' } })}>
+                    <Card style={{ borderLeftWidth: 3, borderLeftColor: task.status === 'PENDING' || task.status === 'ESCALATED' ? colors.status.critical : colors.status.watch }}>
                       <Text style={{ ...typography.label, color: colors.secondary }}>CARE EXCEPTION · {task.status}</Text>
                       <Text style={{ ...typography.bodyMedium, color: colors.text, marginTop: 4 }}>{task.title}</Text>
-                      <Text onPress={() => router.push(`/residents/${task.residentId}`)} style={{ ...typography.caption, color: colors.primary, marginTop: 8 }}>Open resident record</Text>
+                      <Text style={{ ...typography.caption, color: colors.primary, marginTop: 8 }}>{task.workflow?.status ?? 'NEW'} · Open manager action</Text>
                     </Card>
+                    </Pressable>
                   ))}
-                  {reviewQuery.data.incidents.slice(0, 3).map((incident) => (
-                    <Card key={incident.id} style={{ borderLeftWidth: 3, borderLeftColor: incident.safeguardingConcern ? colors.status.critical : colors.status.watch }}>
+                  {reviewQuery.data.incidents.map((incident) => (
+                    <Pressable key={incident.id} onPress={() => router.push({ pathname: '/manager-action', params: { sourceType: 'INCIDENT', sourceId: incident.id, residentId: incident.residentId, title: `${incident.type} incident`, status: incident.workflow?.status ?? 'NEW', assignedTo: incident.workflow?.assignedTo ?? '', actionTaken: incident.workflow?.actionTaken ?? '' } })}>
+                    <Card style={{ borderLeftWidth: 3, borderLeftColor: incident.safeguardingConcern ? colors.status.critical : colors.status.watch }}>
                       <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
                         <AlertTriangle size={17} color={incident.safeguardingConcern ? colors.status.critical : colors.status.watch} />
                         <Text style={{ ...typography.label, color: colors.secondary }}>{incident.type} · {incident.severity}</Text>
                       </View>
                       <Text style={{ ...typography.caption, color: colors.text, marginTop: 6 }}>{incident.description}</Text>
-                      <Text onPress={() => router.push(`/residents/${incident.residentId}`)} style={{ ...typography.caption, color: colors.primary, marginTop: 8 }}>Open resident record</Text>
+                      <Text style={{ ...typography.caption, color: colors.primary, marginTop: 8 }}>{incident.workflow?.status ?? 'NEW'} · Open manager action</Text>
                     </Card>
+                    </Pressable>
                   ))}
                 </View>
               ) : null}

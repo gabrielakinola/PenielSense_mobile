@@ -2,11 +2,11 @@ import { Alert, Pressable, Text, TextInput, View } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ClipboardList, Plus, Save, Trash2 } from 'lucide-react-native';
+import { ClipboardList, Lightbulb, Plus, Save, Sparkles, Trash2 } from 'lucide-react-native';
 import { ScreenContainer } from '@/src/components/ui/ScreenContainer';
 import { Card } from '@/src/components/ui/Card';
 import { EmptyState } from '@/src/components/ui/EmptyState';
-import { getCarePlan, saveCarePlan } from '@/src/services/care-plan.api';
+import { generateCarePlanDraft, getCarePlan, getCarePlanRecommendations, saveCarePlan } from '@/src/services/care-plan.api';
 import { normalizeApiError } from '@/src/lib/api-client';
 import { useAuthStore } from '@/src/stores/auth-store';
 import { isCareHomeManagerRole } from '@/src/lib/care-home-home';
@@ -32,6 +32,7 @@ export default function CarePlanScreen() {
   const queryClient = useQueryClient();
   const isManager = isCareHomeManagerRole(useAuthStore((state) => state.user?.role));
   const query = useQuery({ queryKey: ['carehome', 'care-plan', id], queryFn: () => getCarePlan(id), enabled: !!id });
+  const recommendations = useQuery({ queryKey: ['carehome', 'care-plan-recommendations', id], queryFn: () => getCarePlanRecommendations(id), enabled: !!id && isManager });
   const [sections, setSections] = useState<CarePlanSectionDto[]>([]);
   const [changeReason, setChangeReason] = useState('');
   useEffect(() => { if (query.data) setSections(query.data.sections.map((section) => ({ ...section }))); }, [query.data]);
@@ -49,6 +50,15 @@ export default function CarePlanScreen() {
     },
     onError: (error) => Alert.alert('Could not save care plan', normalizeApiError(error)),
   });
+  const draftMutation = useMutation({
+    mutationFn: () => generateCarePlanDraft(id, recommendations.data!.recommendations.map((item) => item.category)),
+    onSuccess: (draft) => {
+      setSections(draft.sections);
+      setChangeReason('Draft created from reviewed Peniel Care evidence');
+      Alert.alert('Editable draft created', draft.notice);
+    },
+    onError: (error) => Alert.alert('Could not generate draft', normalizeApiError(error)),
+  });
   const inputStyle = { ...typography.body, color: colors.text, minHeight: 48, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, padding: 12, marginTop: 6 };
   const update = (index: number, patch: Partial<CarePlanSectionDto>) => setSections((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, ...patch } : item));
   const valid = sections.length > 0 && changeReason.trim().length >= 3 && sections.every((item) => item.assessedNeed.trim() && item.desiredOutcome.trim() && item.supportInstructions.trim());
@@ -59,6 +69,13 @@ export default function CarePlanScreen() {
       <ScreenContainer keyboardShouldPersistTaps="handled">
         {!isManager && !query.data ? (
           <EmptyState icon={ClipboardList} title="No care plan available" description="A manager has not published this resident’s care plan yet." />
+        ) : null}
+        {isManager && recommendations.data?.recommendations.length ? (
+          <Card style={{ marginBottom: 14, borderLeftWidth: 3, borderLeftColor: colors.status.watch }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}><Lightbulb size={20} color={colors.status.watch} /><Text style={{ ...typography.bodyMedium, color: colors.text }}>Care-plan review suggested</Text></View>
+            {recommendations.data.recommendations.map((item) => <View key={item.id} style={{ marginTop: 12 }}><Text style={{ ...typography.bodyMedium, color: colors.text }}>{item.title}</Text><Text style={{ ...typography.caption, color: colors.secondary, marginTop: 4 }}>{item.reason}</Text><Text style={{ ...typography.label, color: colors.primary, marginTop: 5 }}>Evidence available · manager approval required</Text></View>)}
+            <Pressable disabled={draftMutation.isPending} onPress={() => draftMutation.mutate()} style={{ minHeight: 48, borderRadius: radius.md, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 7, marginTop: 16 }}><Sparkles size={18} color="#FFF" /><Text style={{ ...typography.bodyMedium, color: '#FFF' }}>{draftMutation.isPending ? 'Preparing…' : 'Create editable draft'}</Text></Pressable>
+          </Card>
         ) : null}
         {sections.map((section, index) => (
           <Card key={`${index}-${section.category}`} style={{ marginBottom: 14 }}>

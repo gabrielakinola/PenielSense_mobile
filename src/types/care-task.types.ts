@@ -17,6 +17,7 @@ export interface CareTaskDto {
   completedBy: string | null;
   completedAt: string | null;
   version: number;
+  workflow?: import('@/src/services/manager-review.api').ManagerReviewWorkflow | null;
 }
 
 export interface CreateCareTaskPayload {
