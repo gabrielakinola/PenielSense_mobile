@@ -8,7 +8,10 @@ import { EmptyState } from "@/src/components/ui/EmptyState";
 import { SkeletonCard } from "@/src/components/ui/Skeleton";
 import { AnimatedButton } from "@/src/components/ui/AnimatedButton";
 import { getActiveHandover } from "@/src/services/handover.api";
-import { getResidentEvidenceReport } from "@/src/services/intelligence.api";
+import {
+  getResidentCareBrief,
+  getResidentEvidenceReport,
+} from "@/src/services/intelligence.api";
 import { normalizeApiError } from "@/src/lib/api-client";
 import { useThemeColors } from "@/src/hooks/use-theme-colors";
 import { typography } from "@/src/theme/typography";
@@ -36,7 +39,15 @@ export default function ResidentEvidenceReportScreen() {
       }),
     enabled: !!id && !!handover.data,
   });
+  // The resident timeline and evidence report deliberately share this exact
+  // query key. This is the single source for statements about "now".
+  const careBrief = useQuery({
+    queryKey: ["carehome", "care-brief", id],
+    queryFn: () => getResidentCareBrief(id),
+    enabled: !!id,
+  });
   const data = report.data;
+  const currentSummary = careBrief.data?.currentSummary;
   const timeline = data
     ? [
         ...data.timelineHighlights.map((event) => ({
@@ -74,7 +85,7 @@ export default function ResidentEvidenceReportScreen() {
   const lines = data
     ? [
         `${data.resident.name} — ${data.period.windowLabel}`,
-        data.intelligence.summary,
+    currentSummary ?? data.intelligence.summary,
         "",
         "Confirmed care notes:",
         ...data.careContext.notes.flatMap((note) =>
@@ -101,7 +112,7 @@ export default function ResidentEvidenceReportScreen() {
     <>
       <Stack.Screen options={{ title: "Evidence report" }} />
       <ScreenContainer>
-        {handover.isLoading || report.isLoading ? (
+        {handover.isLoading || report.isLoading || careBrief.isLoading ? (
           <SkeletonCard lines={6} />
         ) : !handover.data ? (
           <EmptyState
@@ -134,12 +145,34 @@ export default function ResidentEvidenceReportScreen() {
               </Text>
               <Text
                 style={{
-                  ...typography.body,
-                  color: colors.text,
-                  marginTop: 14,
+                  ...typography.label,
+                  color: colors.primary,
+                  marginTop: 12,
                 }}
               >
-                {data.intelligence.summary}
+                {currentSummary
+                  ? "CURRENT CARE BRIEF"
+                  : "RECORDED SHIFT SUMMARY"}
+              </Text>
+              <Text
+                style={{
+                  ...typography.body,
+                  color: colors.text,
+                  marginTop: 7,
+                }}
+              >
+                {currentSummary ?? data.intelligence.summary}
+              </Text>
+              <Text
+                style={{
+                  ...typography.caption,
+                  color: colors.secondary,
+                  marginTop: 10,
+                }}
+              >
+                {currentSummary
+                  ? `Updated ${new Date(careBrief.data!.lastUpdatedAt).toLocaleString([], { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}. This is the same current brief shown on the resident timeline.`
+                  : `Recorded ${new Date(data.intelligence.generatedAt).toLocaleString([], { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}. This describes the stored shift snapshot, not the resident’s current location.`}
               </Text>
             </Card>
             <Card>
