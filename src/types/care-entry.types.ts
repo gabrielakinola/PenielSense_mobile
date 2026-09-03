@@ -1,29 +1,29 @@
 export type CareEntryCategory =
-  | 'PERSONAL_CARE'
-  | 'CONTINENCE'
-  | 'MOBILITY'
-  | 'FOOD'
-  | 'FLUID'
-  | 'MOOD_BEHAVIOUR'
-  | 'SLEEP_REST'
-  | 'MEDICATION_OBSERVATION'
-  | 'INCIDENT_CONCERN'
-  | 'GENERAL_WELLBEING';
+  | "PERSONAL_CARE"
+  | "CONTINENCE"
+  | "MOBILITY"
+  | "FOOD"
+  | "FLUID"
+  | "MOOD_BEHAVIOUR"
+  | "SLEEP_REST"
+  | "MEDICATION_OBSERVATION"
+  | "INCIDENT_CONCERN"
+  | "GENERAL_WELLBEING";
 
 export const CARE_ENTRY_CATEGORY_OPTIONS: {
   value: CareEntryCategory;
   label: string;
 }[] = [
-  { value: 'PERSONAL_CARE', label: 'Personal care' },
-  { value: 'CONTINENCE', label: 'Continence' },
-  { value: 'MOBILITY', label: 'Mobility' },
-  { value: 'FOOD', label: 'Food' },
-  { value: 'FLUID', label: 'Fluid' },
-  { value: 'MOOD_BEHAVIOUR', label: 'Mood / behaviour' },
-  { value: 'SLEEP_REST', label: 'Sleep / rest' },
-  { value: 'MEDICATION_OBSERVATION', label: 'Medication-related' },
-  { value: 'INCIDENT_CONCERN', label: 'Incident / concern' },
-  { value: 'GENERAL_WELLBEING', label: 'General wellbeing' },
+  { value: "PERSONAL_CARE", label: "Personal care" },
+  { value: "CONTINENCE", label: "Continence" },
+  { value: "MOBILITY", label: "Mobility" },
+  { value: "FOOD", label: "Food" },
+  { value: "FLUID", label: "Fluid" },
+  { value: "MOOD_BEHAVIOUR", label: "Mood / behaviour" },
+  { value: "SLEEP_REST", label: "Sleep / rest" },
+  { value: "MEDICATION_OBSERVATION", label: "Medication-related" },
+  { value: "INCIDENT_CONCERN", label: "Incident / concern" },
+  { value: "GENERAL_WELLBEING", label: "General wellbeing" },
 ];
 
 export const CARE_ENTRY_CATEGORY_LABEL: Record<CareEntryCategory, string> =
@@ -34,6 +34,22 @@ export const CARE_ENTRY_CATEGORY_LABEL: Record<CareEntryCategory, string> =
 export interface CareEntryItemDto {
   category: CareEntryCategory;
   summary: string;
+}
+
+export type CareObservationKind =
+  | "FLUID_INTAKE"
+  | "TOILET_VISIT"
+  | "MEAL_INTAKE"
+  | "CARE_DECLINED"
+  | "MOBILITY_ASSISTANCE"
+  | "ACTIVITY_PARTICIPATION";
+export type CareObservationUnit =
+  "ML" | "COUNT" | "PORTION" | "STAFF" | "EVENT";
+export interface CareObservationDto {
+  kind: CareObservationKind;
+  value: number;
+  unit: CareObservationUnit;
+  label: string;
 }
 
 export interface CareEntryConfirmedByDto {
@@ -49,6 +65,8 @@ export interface CareEntryDto {
   rawText: string;
   extractedItems: CareEntryItemDto[];
   confirmedItems: CareEntryItemDto[];
+  extractedObservations?: CareObservationDto[];
+  confirmedObservations?: CareObservationDto[];
   usedOpenAI: boolean;
   model: string | null;
   confirmedBy: CareEntryConfirmedByDto;
@@ -62,6 +80,7 @@ export interface CareEntryDto {
 export interface ExtractCareEntryResult {
   rawText: string;
   items: CareEntryItemDto[];
+  observations: CareObservationDto[];
   usedOpenAI: boolean;
   model: string | null;
 }
@@ -72,6 +91,8 @@ export interface CreateCareEntryPayload {
   extractedItems?: CareEntryItemDto[];
   usedOpenAI?: boolean;
   model?: string | null;
+  observations?: CareObservationDto[];
+  extractedObservations?: CareObservationDto[];
   handoverRequired?: boolean;
 }
 
@@ -79,6 +100,7 @@ export interface UpdateCareEntryPayload {
   rawText: string;
   items: CareEntryItemDto[];
   changeReason: string;
+  observations?: CareObservationDto[];
   handoverRequired?: boolean;
 }
 
@@ -108,11 +130,11 @@ export function userCanCreateCareNotes(
   permissions?: Record<string, boolean>,
 ): boolean {
   if (permissions?.create_care_notes === true) return true;
-  const normalized = (role ?? '').toUpperCase().replace(/-/g, '_');
+  const normalized = (role ?? "").toUpperCase().replace(/-/g, "_");
   return (
-    normalized === 'ADMIN' ||
-    normalized === 'CARER' ||
-    normalized === 'SUPER_ADMIN'
+    normalized === "ADMIN" ||
+    normalized === "CARER" ||
+    normalized === "SUPER_ADMIN"
   );
 }
 

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -6,29 +6,30 @@ import {
   TextInput,
   View,
   Switch,
-} from 'react-native';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Trash2 } from 'lucide-react-native';
-import { PenielAiIcon } from '@/src/components/brand/PenielAiIcon';
-import { normalizeApiError } from '@/src/lib/api-client';
-import { useThemeColors } from '@/src/hooks/use-theme-colors';
-import { useResolvedTheme } from '@/src/theme/theme-provider';
-import { useAuthStore } from '@/src/stores/auth-store';
-import { typography } from '@/src/theme/typography';
-import { radius } from '@/src/theme/radius';
-import { MIN_TOUCH_TARGET } from '@/src/constants/app';
+} from "react-native";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Plus, Trash2 } from "lucide-react-native";
+import { PenielAiIcon } from "@/src/components/brand/PenielAiIcon";
+import { normalizeApiError } from "@/src/lib/api-client";
+import { useThemeColors } from "@/src/hooks/use-theme-colors";
+import { useResolvedTheme } from "@/src/theme/theme-provider";
+import { useAuthStore } from "@/src/stores/auth-store";
+import { typography } from "@/src/theme/typography";
+import { radius } from "@/src/theme/radius";
+import { MIN_TOUCH_TARGET } from "@/src/constants/app";
 import {
   createCareEntry,
   extractCareEntry,
   updateCareEntry,
-} from '@/src/services/care-entries.api';
+} from "@/src/services/care-entries.api";
 import {
   CARE_ENTRY_CATEGORY_OPTIONS,
   userCanCreateCareNotes,
   type CareEntryCategory,
   type CareEntryDto,
   type CareEntryItemDto,
-} from '@/src/types/care-entry.types';
+  type CareObservationDto,
+} from "@/src/types/care-entry.types";
 
 interface DraftItem {
   key: string;
@@ -55,14 +56,18 @@ export function CareEntryComposer({
   const user = useAuthStore((s) => s.user);
   const canCreate = userCanCreateCareNotes(user?.role, user?.permissions);
   const keySeq = useRef(0);
-  const [rawText, setRawText] = useState('');
-  const [step, setStep] = useState<'compose' | 'review'>('compose');
+  const [rawText, setRawText] = useState("");
+  const [step, setStep] = useState<"compose" | "review">("compose");
   const [draftItems, setDraftItems] = useState<DraftItem[]>([]);
   const [extractedItems, setExtractedItems] = useState<CareEntryItemDto[]>([]);
   const [usedOpenAI, setUsedOpenAI] = useState(false);
   const [model, setModel] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
-  const [changeReason, setChangeReason] = useState('');
+  const [changeReason, setChangeReason] = useState("");
+  const [observations, setObservations] = useState<CareObservationDto[]>([]);
+  const [extractedObservations, setExtractedObservations] = useState<
+    CareObservationDto[]
+  >([]);
   const [handoverRequired, setHandoverRequired] = useState(initialHandover);
 
   const nextKey = () => {
@@ -75,23 +80,25 @@ export function CareEntryComposer({
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: theme === 'dark' ? 'rgba(255,255,255,0.04)' : '#FFFFFF',
+    backgroundColor: theme === "dark" ? "rgba(255,255,255,0.04)" : "#FFFFFF",
     paddingHorizontal: 14,
     paddingVertical: 12,
     color: colors.text,
     ...typography.body,
-    textAlignVertical: 'top' as const,
+    textAlignVertical: "top" as const,
   };
 
   const resetComposer = () => {
-    setRawText('');
+    setRawText("");
     setDraftItems([]);
     setExtractedItems([]);
+    setExtractedObservations([]);
     setUsedOpenAI(false);
     setModel(null);
-    setStep('compose');
+    setStep("compose");
     setFormError(null);
-    setChangeReason('');
+    setChangeReason("");
+    setObservations([]);
     setHandoverRequired(initialHandover);
     onCancelEdit?.();
   };
@@ -99,7 +106,7 @@ export function CareEntryComposer({
   useEffect(() => {
     if (!editingEntry) return;
     setFormError(null);
-    setChangeReason('');
+    setChangeReason("");
     setRawText(editingEntry.rawText);
     setDraftItems(
       editingEntry.confirmedItems.map((item) => ({
@@ -111,8 +118,10 @@ export function CareEntryComposer({
     setExtractedItems(editingEntry.extractedItems ?? []);
     setUsedOpenAI(false);
     setModel(null);
+    setObservations(editingEntry.confirmedObservations ?? []);
+    setExtractedObservations(editingEntry.extractedObservations ?? []);
     setHandoverRequired(editingEntry.handoverRequired ?? false);
-    setStep('review');
+    setStep("review");
   }, [editingEntry]);
 
   const extractMutation = useMutation({
@@ -129,7 +138,9 @@ export function CareEntryComposer({
       );
       setUsedOpenAI(result.usedOpenAI);
       setModel(result.model);
-      setStep('review');
+      setObservations(result.observations ?? []);
+      setExtractedObservations(result.observations ?? []);
+      setStep("review");
     },
     onError: (error) => {
       setFormError(normalizeApiError(error));
@@ -147,12 +158,14 @@ export function CareEntryComposer({
         extractedItems,
         usedOpenAI,
         model,
+        observations,
+        extractedObservations,
         handoverRequired,
       }),
     onSuccess: async () => {
       resetComposer();
       await queryClient.invalidateQueries({
-        queryKey: ['carehome', 'care-entries', residentId],
+        queryKey: ["carehome", "care-entries", residentId],
       });
     },
     onError: (error) => {
@@ -162,7 +175,7 @@ export function CareEntryComposer({
 
   const updateMutation = useMutation({
     mutationFn: () => {
-      if (!editingEntry) throw new Error('No note selected');
+      if (!editingEntry) throw new Error("No note selected");
       return updateCareEntry(residentId, editingEntry.id, {
         rawText: rawText.trim(),
         items: draftItems.map((item) => ({
@@ -170,13 +183,14 @@ export function CareEntryComposer({
           summary: item.summary.trim(),
         })),
         changeReason: changeReason.trim(),
+        observations,
         handoverRequired,
       });
     },
     onSuccess: async () => {
       resetComposer();
       await queryClient.invalidateQueries({
-        queryKey: ['carehome', 'care-entries', residentId],
+        queryKey: ["carehome", "care-entries", residentId],
       });
     },
     onError: (error) => {
@@ -205,7 +219,7 @@ export function CareEntryComposer({
 
   return (
     <View style={{ gap: 12 }}>
-      {step === 'compose' ? (
+      {step === "compose" ? (
         <>
           <TextInput
             value={rawText}
@@ -233,14 +247,14 @@ export function CareEntryComposer({
               borderColor: colors.border,
               padding: 12,
               backgroundColor:
-                theme === 'dark' ? 'rgba(255,255,255,0.04)' : colors.background,
+                theme === "dark" ? "rgba(255,255,255,0.04)" : colors.background,
             }}
           >
             <Text
               style={{
                 ...typography.label,
                 color: colors.secondary,
-                textTransform: 'uppercase',
+                textTransform: "uppercase",
                 letterSpacing: 0.6,
               }}
             >
@@ -255,17 +269,19 @@ export function CareEntryComposer({
                 style={{ ...inputStyle, minHeight: 72, marginTop: 8 }}
               />
             ) : (
-              <Text style={{ ...typography.body, color: colors.text, marginTop: 6 }}>
+              <Text
+                style={{ ...typography.body, color: colors.text, marginTop: 6 }}
+              >
                 {rawText}
               </Text>
             )}
           </View>
           <Text style={{ ...typography.caption, color: colors.secondary }}>
             {editingId
-              ? 'Update the wording and categories, then save.'
+              ? "Update the wording and categories, then save."
               : usedOpenAI
-                ? 'Check each item, then confirm. Edit anything that is wrong before saving.'
-                : 'Saved as a general update. Split or recategorise if needed, then confirm.'}
+                ? "Check each item, then confirm. Edit anything that is wrong before saving."
+                : "Saved as a general update. Split or recategorise if needed, then confirm."}
           </Text>
 
           {draftItems.map((item) => (
@@ -279,7 +295,7 @@ export function CareEntryComposer({
                 gap: 10,
               }}
             >
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
                 {CARE_ENTRY_CATEGORY_OPTIONS.map((option) => {
                   const selected = option.value === item.category;
                   return (
@@ -306,13 +322,13 @@ export function CareEntryComposer({
                         borderColor: selected ? colors.primary : colors.border,
                         backgroundColor: selected
                           ? `${colors.primary}22`
-                          : 'transparent',
+                          : "transparent",
                       }}
                     >
                       <Text
                         style={{
                           ...typography.caption,
-                          fontWeight: '600',
+                          fontWeight: "600",
                           color: selected ? colors.primary : colors.secondary,
                         }}
                       >
@@ -345,16 +361,21 @@ export function CareEntryComposer({
                 accessibilityRole="button"
                 accessibilityLabel="Remove item"
                 style={{
-                  alignSelf: 'flex-start',
+                  alignSelf: "flex-start",
                   minHeight: MIN_TOUCH_TARGET,
-                  flexDirection: 'row',
-                  alignItems: 'center',
+                  flexDirection: "row",
+                  alignItems: "center",
                   gap: 6,
                   opacity: draftItems.length <= 1 ? 0.4 : 1,
                 }}
               >
                 <Trash2 size={16} color={colors.status.critical} />
-                <Text style={{ ...typography.caption, color: colors.status.critical }}>
+                <Text
+                  style={{
+                    ...typography.caption,
+                    color: colors.status.critical,
+                  }}
+                >
                   Remove
                 </Text>
               </Pressable>
@@ -367,8 +388,8 @@ export function CareEntryComposer({
                 ...current,
                 {
                   key: nextKey(),
-                  category: 'GENERAL_WELLBEING',
-                  summary: '',
+                  category: "GENERAL_WELLBEING",
+                  summary: "",
                 },
               ])
             }
@@ -376,8 +397,8 @@ export function CareEntryComposer({
             accessibilityLabel="Add category"
             style={{
               minHeight: MIN_TOUCH_TARGET,
-              flexDirection: 'row',
-              alignItems: 'center',
+              flexDirection: "row",
+              alignItems: "center",
               gap: 6,
             }}
           >
@@ -385,7 +406,7 @@ export function CareEntryComposer({
             <Text
               style={{
                 ...typography.caption,
-                fontWeight: '600',
+                fontWeight: "600",
                 color: colors.primary,
               }}
             >
@@ -393,29 +414,144 @@ export function CareEntryComposer({
             </Text>
           </Pressable>
 
-          <View style={{ gap: 8 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, borderWidth: 1, borderColor: handoverRequired ? colors.primary : colors.border, borderRadius: radius.md, backgroundColor: handoverRequired ? `${colors.primary}12` : 'transparent' }}>
-              <View style={{ flex: 1, gap: 2 }}>
-                <Text style={{ ...typography.bodyMedium, color: colors.text }}>Highlight for handover</Text>
-                <Text style={{ ...typography.caption, color: colors.secondary }}>Show this update prominently to the next shift.</Text>
+          {observations.length ? (
+            <View
+              style={{
+                borderRadius: radius.lg,
+                borderWidth: 1,
+                borderColor: colors.primary,
+                backgroundColor: `${colors.primary}0D`,
+                padding: 12,
+                gap: 10,
+              }}
+            >
+              <View>
+                <Text style={{ ...typography.bodyMedium, color: colors.text }}>
+                  Check the recorded details
+                </Text>
+                <Text
+                  style={{
+                    ...typography.caption,
+                    color: colors.secondary,
+                    marginTop: 3,
+                  }}
+                >
+                  These details help Peniel Care notice changes over time.
+                  Correct or remove anything that is wrong.
+                </Text>
               </View>
-              <Switch value={handoverRequired} onValueChange={setHandoverRequired} trackColor={{ false: colors.border, true: `${colors.primary}88` }} thumbColor={handoverRequired ? colors.primary : colors.secondary} accessibilityLabel="Highlight for handover" />
+              {observations.map((observation, index) => (
+                <View
+                  key={`${observation.kind}-${index}`}
+                  style={{ flexDirection: "row", alignItems: "center", gap: 9 }}
+                >
+                  <TextInput
+                    value={String(observation.value)}
+                    onChangeText={(value) =>
+                      setObservations((rows) =>
+                        rows.map((row, rowIndex) =>
+                          rowIndex === index
+                            ? {
+                                ...row,
+                                value:
+                                  Number(value.replace(/[^0-9.]/g, "")) || 0,
+                              }
+                            : row,
+                        ),
+                      )
+                    }
+                    keyboardType="decimal-pad"
+                    accessibilityLabel={`${observation.label} amount`}
+                    style={{
+                      ...inputStyle,
+                      minHeight: 44,
+                      width: 76,
+                      textAlignVertical: "center",
+                      textAlign: "center",
+                    }}
+                  />
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ ...typography.caption, color: colors.text }}>
+                      {observation.label}
+                    </Text>
+                    <Text
+                      style={{ ...typography.label, color: colors.secondary }}
+                    >
+                      {observation.unit === "ML"
+                        ? "ml"
+                        : observation.unit.toLowerCase()}
+                    </Text>
+                  </View>
+                  <Pressable
+                    onPress={() =>
+                      setObservations((rows) =>
+                        rows.filter((_, rowIndex) => rowIndex !== index),
+                      )
+                    }
+                    accessibilityLabel={`Remove ${observation.label}`}
+                  >
+                    <Trash2 size={17} color={colors.status.critical} />
+                  </Pressable>
+                </View>
+              ))}
             </View>
-            {editingId ? <>
-              <Text style={{ ...typography.label, color: colors.secondary }}>
-                Reason for correction
-              </Text>
-              <TextInput
-                value={changeReason}
-                onChangeText={setChangeReason}
-                placeholder="Briefly explain what was corrected"
-                placeholderTextColor={colors.secondary}
-                maxLength={500}
-                style={{ ...inputStyle, minHeight: 56 }}
+          ) : null}
+
+          <View style={{ gap: 8 }}>
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 12,
+                padding: 12,
+                borderWidth: 1,
+                borderColor: handoverRequired ? colors.primary : colors.border,
+                borderRadius: radius.md,
+                backgroundColor: handoverRequired
+                  ? `${colors.primary}12`
+                  : "transparent",
+              }}
+            >
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text style={{ ...typography.bodyMedium, color: colors.text }}>
+                  Highlight for handover
+                </Text>
+                <Text
+                  style={{ ...typography.caption, color: colors.secondary }}
+                >
+                  Show this update prominently to the next shift.
+                </Text>
+              </View>
+              <Switch
+                value={handoverRequired}
+                onValueChange={setHandoverRequired}
+                trackColor={{
+                  false: colors.border,
+                  true: `${colors.primary}88`,
+                }}
+                thumbColor={
+                  handoverRequired ? colors.primary : colors.secondary
+                }
+                accessibilityLabel="Highlight for handover"
               />
-            </> : null}
+            </View>
+            {editingId ? (
+              <>
+                <Text style={{ ...typography.label, color: colors.secondary }}>
+                  Reason for correction
+                </Text>
+                <TextInput
+                  value={changeReason}
+                  onChangeText={setChangeReason}
+                  placeholder="Briefly explain what was corrected"
+                  placeholderTextColor={colors.secondary}
+                  maxLength={500}
+                  style={{ ...inputStyle, minHeight: 56 }}
+                />
+              </>
+            ) : null}
             <PrimaryAction
-              label={editingId ? 'Save changes' : 'Confirm & save'}
+              label={editingId ? "Save changes" : "Confirm & save"}
               pending={saving}
               disabled={!canSave}
               onPress={() =>
@@ -428,25 +564,25 @@ export function CareEntryComposer({
                   resetComposer();
                   return;
                 }
-                setStep('compose');
+                setStep("compose");
               }}
               disabled={saving}
               accessibilityRole="button"
-              accessibilityLabel={editingId ? 'Cancel' : 'Edit original'}
+              accessibilityLabel={editingId ? "Cancel" : "Edit original"}
               style={{
                 minHeight: MIN_TOUCH_TARGET,
-                alignItems: 'center',
-                justifyContent: 'center',
+                alignItems: "center",
+                justifyContent: "center",
               }}
             >
               <Text
                 style={{
                   ...typography.caption,
-                  fontWeight: '600',
+                  fontWeight: "600",
                   color: colors.secondary,
                 }}
               >
-                {editingId ? 'Cancel' : 'Edit original'}
+                {editingId ? "Cancel" : "Edit original"}
               </Text>
             </Pressable>
           </View>
@@ -487,9 +623,9 @@ function PrimaryAction({
         minHeight: MIN_TOUCH_TARGET,
         borderRadius: radius.button,
         backgroundColor: colors.primary,
-        alignItems: 'center',
-        justifyContent: 'center',
-        flexDirection: 'row',
+        alignItems: "center",
+        justifyContent: "center",
+        flexDirection: "row",
         gap: 8,
         opacity: disabled ? 0.5 : 1,
         paddingHorizontal: 16,
@@ -503,8 +639,8 @@ function PrimaryAction({
           <Text
             style={{
               ...typography.bodyMedium,
-              color: '#FFFFFF',
-              fontWeight: '600',
+              color: "#FFFFFF",
+              fontWeight: "600",
             }}
           >
             {label}

@@ -1,31 +1,32 @@
-import { useCallback, useState, type ReactNode } from 'react';
-import { FlatList, RefreshControl, Text, View } from 'react-native';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useRouter } from 'expo-router';
-import { ClipboardList } from 'lucide-react-native';
-import { ScreenContainer } from '@/src/components/ui/ScreenContainer';
-import { ScreenHeader } from '@/src/components/ui/ScreenHeader';
-import { PageIntro } from '@/src/components/ui/PageIntro';
-import { Card } from '@/src/components/ui/Card';
-import { SectionHeader } from '@/src/components/ui/SectionHeader';
-import { EmptyState } from '@/src/components/ui/EmptyState';
-import { SkeletonCard } from '@/src/components/ui/Skeleton';
-import { AnimatedButton } from '@/src/components/ui/AnimatedButton';
-import { HandoverResidentRow } from '@/src/components/handovers/HandoverResidentRow';
+import { useCallback, useState, type ReactNode } from "react";
+import { Alert, FlatList, RefreshControl, Text, View } from "react-native";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "expo-router";
+import { CheckCircle2, ClipboardList } from "lucide-react-native";
+import { ScreenContainer } from "@/src/components/ui/ScreenContainer";
+import { ScreenHeader } from "@/src/components/ui/ScreenHeader";
+import { PageIntro } from "@/src/components/ui/PageIntro";
+import { Card } from "@/src/components/ui/Card";
+import { SectionHeader } from "@/src/components/ui/SectionHeader";
+import { EmptyState } from "@/src/components/ui/EmptyState";
+import { SkeletonCard } from "@/src/components/ui/Skeleton";
+import { AnimatedButton } from "@/src/components/ui/AnimatedButton";
+import { HandoverResidentRow } from "@/src/components/handovers/HandoverResidentRow";
 import {
   generateHandover,
   getActiveHandover,
-} from '@/src/services/handover.api';
-import { normalizeApiError } from '@/src/lib/api-client';
-import { useThemeColors } from '@/src/hooks/use-theme-colors';
-import { useResolvedTheme } from '@/src/theme/theme-provider';
-import { typography } from '@/src/theme/typography';
-import { radius } from '@/src/theme/radius';
+  acknowledgeHandover,
+} from "@/src/services/handover.api";
+import { normalizeApiError } from "@/src/lib/api-client";
+import { useThemeColors } from "@/src/hooks/use-theme-colors";
+import { useResolvedTheme } from "@/src/theme/theme-provider";
+import { typography } from "@/src/theme/typography";
+import { radius } from "@/src/theme/radius";
 
 const SHIFT_COPY = {
-  morning: 'Morning handover',
-  afternoon: 'Afternoon handover',
-  night: 'Night handover',
+  morning: "Morning handover",
+  afternoon: "Afternoon handover",
+  night: "Night handover",
 } as const;
 
 export default function HandoversScreen() {
@@ -36,14 +37,26 @@ export default function HandoversScreen() {
   const [refreshing, setRefreshing] = useState(false);
 
   const handoverQuery = useQuery({
-    queryKey: ['carehome', 'handovers', 'active'],
-    queryFn: () => getActiveHandover({ sort: 'priority' }),
+    queryKey: ["carehome", "handovers", "active"],
+    queryFn: () => getActiveHandover({ sort: "priority" }),
   });
 
   const generateMutation = useMutation({
     mutationFn: () => generateHandover(true),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['carehome', 'handovers'] });
+      await queryClient.invalidateQueries({
+        queryKey: ["carehome", "handovers"],
+      });
+    },
+  });
+
+  const acknowledgeMutation = useMutation({
+    mutationFn: (handoverId: string) => acknowledgeHandover(handoverId),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(["carehome", "handovers", "active"], updated);
+    },
+    onError: (error) => {
+      Alert.alert("Could not save acknowledgement", normalizeApiError(error));
     },
   });
 
@@ -97,7 +110,7 @@ export default function HandoversScreen() {
           title="Ready when you are"
           description="Create the current shift handover for your care home."
           actionLabel={
-            generateMutation.isPending ? 'Generating…' : 'Generate handover'
+            generateMutation.isPending ? "Generating…" : "Generate handover"
           }
           onAction={() => generateMutation.mutate()}
         />
@@ -131,28 +144,31 @@ export default function HandoversScreen() {
               title={SHIFT_COPY[handover.shiftWindow]}
               subtitle={handover.careHomeSummary.narrative}
               footer={
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                <View
+                  style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}
+                >
                   {[
                     {
-                      label: 'Attention',
-                      value: handover.careHomeSummary.residentsRequiringAttention,
+                      label: "Attention",
+                      value:
+                        handover.careHomeSummary.residentsRequiringAttention,
                       color: colors.status.critical,
                       bg: colors.statusBg.critical,
                     },
                     {
-                      label: 'Flags',
+                      label: "Flags",
                       value: handover.careHomeSummary.residentsWithReviewFlags,
                       color: colors.status.watch,
                       bg: colors.statusBg.watch,
                     },
                     {
-                      label: 'Monitored',
+                      label: "Monitored",
                       value: handover.careHomeSummary.residentsMonitored,
                       color: colors.primary,
                       bg:
-                        theme === 'dark'
-                          ? 'rgba(135,165,248,0.14)'
-                          : 'rgba(37,99,235,0.08)',
+                        theme === "dark"
+                          ? "rgba(135,165,248,0.14)"
+                          : "rgba(37,99,235,0.08)",
                     },
                   ].map((pill) => (
                     <View
@@ -168,7 +184,7 @@ export default function HandoversScreen() {
                         style={{
                           ...typography.label,
                           color: pill.color,
-                          fontWeight: '700',
+                          fontWeight: "700",
                         }}
                       >
                         {pill.value} {pill.label}
@@ -181,8 +197,9 @@ export default function HandoversScreen() {
 
             <Card style={{ marginBottom: 12 }}>
               <Text style={{ ...typography.caption, color: colors.secondary }}>
-                Sleep changes {handover.careHomeSummary.residentsWithSleepChanges} ·
-                Movement {handover.careHomeSummary.residentsWithIncreasedMovement} ·
+                Sleep changes{" "}
+                {handover.careHomeSummary.residentsWithSleepChanges} · Movement{" "}
+                {handover.careHomeSummary.residentsWithIncreasedMovement} ·
                 Device issues {handover.careHomeSummary.deviceIssues}
               </Text>
               {handover.canRefresh ? (
@@ -190,8 +207,8 @@ export default function HandoversScreen() {
                   <AnimatedButton
                     label={
                       generateMutation.isPending
-                        ? 'Refreshing…'
-                        : 'Refresh this shift once'
+                        ? "Refreshing…"
+                        : "Refresh this shift once"
                     }
                     onPress={() => generateMutation.mutate()}
                     disabled={generateMutation.isPending}
@@ -209,6 +226,55 @@ export default function HandoversScreen() {
                   Manual refresh already used for this shift.
                 </Text>
               )}
+              <View
+                style={{
+                  borderTopWidth: 1,
+                  borderTopColor: colors.border,
+                  marginTop: 14,
+                  paddingTop: 14,
+                }}
+              >
+                {handover.currentUserHasRead ? (
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 8,
+                    }}
+                  >
+                    <CheckCircle2 size={20} color={colors.status.good} />
+                    <View style={{ flex: 1 }}>
+                      <Text
+                        style={{ ...typography.bodyMedium, color: colors.text }}
+                      >
+                        You have read this handover
+                      </Text>
+                      <Text
+                        style={{
+                          ...typography.caption,
+                          color: colors.secondary,
+                          marginTop: 2,
+                        }}
+                      >
+                        {handover.readBy.length} staff acknowledgement
+                        {handover.readBy.length === 1 ? "" : "s"} recorded
+                      </Text>
+                    </View>
+                  </View>
+                ) : (
+                  <AnimatedButton
+                    label={
+                      acknowledgeMutation.isPending
+                        ? "Saving…"
+                        : "I have read this handover"
+                    }
+                    onPress={() => acknowledgeMutation.mutate(handover.id)}
+                    disabled={acknowledgeMutation.isPending}
+                    size="md"
+                    accessibilityLabel="Confirm that you have read this handover"
+                  />
+                )}
+              </View>
             </Card>
 
             <SectionHeader title="Priority residents" />

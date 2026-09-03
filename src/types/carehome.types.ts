@@ -1,12 +1,9 @@
-export type InsightSeverity = 'info' | 'watch' | 'attention';
-export type InsightKind = 'correlation' | 'trend' | 'baseline';
-export type RoutineStatus = 'on_routine' | 'delayed' | 'early' | 'unknown';
+export type InsightSeverity = "info" | "watch" | "attention";
+export type InsightKind = "correlation" | "trend" | "baseline";
+export type RoutineStatus = "on_routine" | "delayed" | "early" | "unknown";
 
 export type CareBriefStatusTone =
-  | 'attention'
-  | 'watch'
-  | 'stable'
-  | 'unmonitored';
+  "attention" | "watch" | "stable" | "unmonitored";
 
 export interface ResidentCareBriefGlanceRow {
   area: string;
@@ -14,7 +11,7 @@ export interface ResidentCareBriefGlanceRow {
 }
 
 export interface ResidentBaselineReliability {
-  status: 'learning' | 'limited' | 'established' | 'interrupted';
+  status: "learning" | "limited" | "established" | "interrupted";
   label: string;
   description: string;
   referenceWindowDays: number;
@@ -43,6 +40,26 @@ export interface ResidentCareBrief {
   baselineReliability?: ResidentBaselineReliability;
   why?: ResidentCareBriefReason[];
   dataCoverageNote?: string | null;
+  careActivity?: {
+    status: "learning" | "ready";
+    statusLabel: string;
+    description: string;
+    changes: Array<{
+      id: string;
+      area: string;
+      headline: string;
+      detail: string;
+      tone: "watch" | "attention";
+    }>;
+  };
+  observationBundles?: Array<{
+    id: string;
+    title: string;
+    summary: string;
+    whatToNotice: string[];
+    nextStep: string;
+    sourceAreas: string[];
+  }>;
   usedOpenAI: boolean;
   model: string | null;
 }
@@ -63,18 +80,14 @@ export interface ResidentIntelligenceBadgesResponse {
   badges: ResidentIntelligenceBadge[];
 }
 
-export type ApiResidentGender = 'MALE' | 'FEMALE';
-export type ApiDeviceType = 'V5_WRISTBAND' | 'TUYA_RADAR' | 'WITHINGS_MAT';
-export type ApiResidentWellnessStatus = 'good' | 'watch' | 'critical';
+export type ApiResidentGender = "MALE" | "FEMALE";
+export type ApiDeviceType = "V5_WRISTBAND" | "TUYA_RADAR" | "WITHINGS_MAT";
+export type ApiResidentWellnessStatus = "good" | "watch" | "critical";
 
 export type ResidentIntelligenceFilter =
-  | 'attention'
-  | 'watch'
-  | 'delayed'
-  | 'has_insights'
-  | 'clear';
+  "attention" | "watch" | "delayed" | "has_insights" | "clear";
 
-export type ResidentSortOption = 'name' | 'intelligence';
+export type ResidentSortOption = "name" | "intelligence";
 
 export interface ApiResidentDeviceDto {
   id: string;
@@ -87,7 +100,7 @@ export interface ApiResidentLatestVitalDto {
   heartRate: number;
   spo2: number;
   skinTemperature: number;
-  status: 'stable' | 'watch' | 'critical';
+  status: "stable" | "watch" | "critical";
   timestamp: string;
 }
 
@@ -112,7 +125,7 @@ export interface ApiResidentDto {
   devices: ApiResidentDeviceDto[];
 }
 
-export type ResidentRiskLevel = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+export type ResidentRiskLevel = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
 
 export interface ResidentCareProfileDto {
   id: string | null;
@@ -151,7 +164,7 @@ export interface ResidentCareProfileDto {
     controls: string;
     reviewDueAt?: string | null;
   }>;
-  dnacprStatus: 'YES' | 'NO' | 'UNKNOWN';
+  dnacprStatus: "YES" | "NO" | "UNKNOWN";
   capacitySummary: string;
   consentSummary: string;
   dolsSummary: string;
@@ -168,7 +181,7 @@ export interface QueryResidentsParams {
   sort?: ResidentSortOption;
 }
 
-export type DashboardShift = 'morning' | 'afternoon' | 'night';
+export type DashboardShift = "morning" | "afternoon" | "night";
 
 export interface DashboardSummaryBullet {
   residentId: string;
@@ -191,11 +204,7 @@ export interface DashboardSummaryDto {
   generatedAt: string;
 }
 
-export type DashboardGlanceTone =
-  | 'attention'
-  | 'watch'
-  | 'stable'
-  | 'coverage';
+export type DashboardGlanceTone = "attention" | "watch" | "stable" | "coverage";
 
 export interface DashboardGlanceCardDto {
   id: string;
@@ -207,24 +216,33 @@ export interface DashboardGlanceCardDto {
 
 export interface ApiDashboardStatsDto {
   hero: {
-    residentsMonitored: { available: boolean; value: number | null; caption?: string };
-    attentionCount: { available: boolean; value: number | null; caption?: string };
-    openReviewFlags: { available: boolean; value: number | null; caption?: string };
+    residentsMonitored: {
+      available: boolean;
+      value: number | null;
+      caption?: string;
+    };
+    attentionCount: {
+      available: boolean;
+      value: number | null;
+      caption?: string;
+    };
+    openReviewFlags: {
+      available: boolean;
+      value: number | null;
+      caption?: string;
+    };
   };
   glance: DashboardGlanceCardDto[];
   summary: DashboardSummaryDto;
   trendsAvailable: boolean;
 }
 
-export type ApiReviewFlagSeverity = 'watch' | 'critical';
+export type ApiReviewFlagSeverity = "watch" | "critical";
 export type ApiReviewFlagStatus =
-  | 'open'
-  | 'reviewed'
-  | 'false_alarm'
-  | 'auto_resolved';
-export type ApiManualCloseReviewFlagStatus = 'reviewed' | 'false_alarm';
-export type ApiMonitoredVitalType = 'heartRate' | 'spo2' | 'skinTemperature';
-export type ApiReviewFlagsPeriod = 'today' | '7d' | '30d';
+  "open" | "reviewed" | "false_alarm" | "auto_resolved";
+export type ApiManualCloseReviewFlagStatus = "reviewed" | "false_alarm";
+export type ApiMonitoredVitalType = "heartRate" | "spo2" | "skinTemperature";
+export type ApiReviewFlagsPeriod = "today" | "7d" | "30d";
 
 export interface ApiReviewFlagDto {
   id: string;
@@ -261,8 +279,8 @@ export interface QueryReviewFlagsParams {
   period?: ApiReviewFlagsPeriod;
 }
 
-export type HandoverShiftWindow = 'morning' | 'afternoon' | 'night';
-export type HandoverRiskLevel = 'normal' | 'watch' | 'attention';
+export type HandoverShiftWindow = "morning" | "afternoon" | "night";
+export type HandoverRiskLevel = "normal" | "watch" | "attention";
 
 export interface HandoverResidentCard {
   residentId: string;
@@ -325,26 +343,66 @@ export interface HandoverSnapshotDto {
   version: number;
   canRefresh: boolean;
   manualRefreshUsed: boolean;
+  readBy: Array<{ userId: string; name: string; role: string; readAt: string }>;
+  currentUserHasRead: boolean;
 }
 
 export interface QueryHandoverParams {
   search?: string;
-  sort?: 'alpha' | 'priority';
+  sort?: "alpha" | "priority";
   attention?: boolean;
 }
 
 export interface ResidentEvidenceReport {
-  resident: { id: string; name: string; room: string | null; routineStatus: string };
-  period: { dateKey: string; window: HandoverShiftWindow; windowLabel: string; start: string; end: string };
+  resident: {
+    id: string;
+    name: string;
+    room: string | null;
+    routineStatus: string;
+  };
+  period: {
+    dateKey: string;
+    window: HandoverShiftWindow;
+    windowLabel: string;
+    start: string;
+    end: string;
+  };
   intelligence: { summary: string; generatedAt: string; model: string };
   supportingEvidence: { V5: string[]; Tuya: string[]; Withings: string[] };
-  timelineHighlights: Array<{ label?: string; detail?: string; time?: string }>;
+  timelineHighlights: Array<{
+    id: string;
+    at: string;
+    label: string;
+    deviceType: string;
+    eventType: string;
+  }>;
   reviewFlags: { active: ApiReviewFlagDto[]; resolved: ApiReviewFlagDto[] };
   careContext: {
     noteCount: number;
-    notes: Array<{ id: string; recordedAt: string; recordedBy: string; items: Array<{ category: string; summary: string }> }>;
-    tasks: Array<{ id: string; title: string; category: string; dueAt: string; status: string; outcomeNote: string }>;
-    incidents: Array<{ id: string; type: string; severity: string; occurredAt: string; description: string; immediateAction: string; safeguardingConcern: boolean; status: string }>;
+    notes: Array<{
+      id: string;
+      recordedAt: string;
+      recordedBy: string;
+      items: Array<{ category: string; summary: string }>;
+    }>;
+    tasks: Array<{
+      id: string;
+      title: string;
+      category: string;
+      dueAt: string;
+      status: string;
+      outcomeNote: string;
+    }>;
+    incidents: Array<{
+      id: string;
+      type: string;
+      severity: string;
+      occurredAt: string;
+      description: string;
+      immediateAction: string;
+      safeguardingConcern: boolean;
+      status: string;
+    }>;
     provenance: string;
   };
 }
