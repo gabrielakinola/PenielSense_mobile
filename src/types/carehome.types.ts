@@ -13,6 +13,22 @@ export interface ResidentCareBriefGlanceRow {
   summary: string;
 }
 
+export interface ResidentBaselineReliability {
+  status: 'learning' | 'limited' | 'established' | 'interrupted';
+  label: string;
+  description: string;
+  referenceWindowDays: number;
+  lastCalculatedAt: string | null;
+}
+
+export interface ResidentCareBriefReason {
+  id: string;
+  area: string;
+  headline: string;
+  detail: string;
+  source: string;
+}
+
 export interface ResidentCareBrief {
   residentId: string;
   residentName: string;
@@ -24,6 +40,9 @@ export interface ResidentCareBrief {
   currentSummary: string;
   suggestedStaffReview: string;
   glance: ResidentCareBriefGlanceRow[];
+  baselineReliability?: ResidentBaselineReliability;
+  why?: ResidentCareBriefReason[];
+  dataCoverageNote?: string | null;
   usedOpenAI: boolean;
   model: string | null;
 }

@@ -1,4 +1,5 @@
-import { Share, Text, View } from 'react-native';
+import { Share, Text, View, Pressable } from 'react-native';
+import { useState } from 'react';
 import {
   AlertCircle,
   Activity,
@@ -7,6 +8,7 @@ import {
   Radio,
   Share2,
   Watch,
+  Info,
 } from 'lucide-react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Card } from '@/src/components/ui/Card';
@@ -81,6 +83,7 @@ export function ResidentCareBriefPanel({
 }: ResidentCareBriefPanelProps) {
   const colors = useThemeColors();
   const theme = useResolvedTheme();
+  const [showWhy, setShowWhy] = useState(false);
   const showSkeleton = isLoading || (isFetching && !brief);
 
   if (showSkeleton) {
@@ -210,6 +213,22 @@ export function ResidentCareBriefPanel({
           <Text style={{ ...typography.body, color: colors.text, lineHeight: 23 }}>
             {brief.currentSummary}
           </Text>
+          {brief.baselineReliability ? (
+            <View style={{ marginTop: 12, alignSelf: 'flex-start', paddingHorizontal: 9, paddingVertical: 5, borderRadius: radius.full, borderWidth: 1, borderColor: colors.border }}>
+              <Text style={{ ...typography.label, color: colors.secondary }}>{brief.baselineReliability.label}</Text>
+            </View>
+          ) : null}
+          <Pressable onPress={() => setShowWhy((value) => !value)} accessibilityRole="button" style={{ minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 7 }}>
+            <Info size={17} color={colors.primary} />
+            <Text style={{ ...typography.caption, color: colors.primary, fontWeight: '700' }}>{showWhy ? 'Hide supporting information' : 'Why am I seeing this?'}</Text>
+          </Pressable>
+          {showWhy ? (
+            <View style={{ gap: 9, paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.border }}>
+              {brief.baselineReliability ? <View><Text style={{ ...typography.bodyMedium, color: colors.text }}>{brief.baselineReliability.label}</Text><Text style={{ ...typography.caption, color: colors.secondary, marginTop: 3 }}>{brief.baselineReliability.description}</Text></View> : null}
+              {(brief.why ?? []).map((reason) => <View key={reason.id} style={{ padding: 10, borderRadius: radius.md, backgroundColor: colors.surfaceElevated }}><Text style={{ ...typography.label, color: colors.primary }}>{reason.area.toUpperCase()} · {reason.source}</Text><Text style={{ ...typography.caption, color: colors.text, marginTop: 3 }}>{reason.headline}</Text><Text style={{ ...typography.label, color: colors.secondary, marginTop: 4 }}>{reason.detail}</Text></View>)}
+              {brief.dataCoverageNote ? <Text style={{ ...typography.label, color: colors.secondary }}>{brief.dataCoverageNote}</Text> : null}
+            </View>
+          ) : null}
         </Card>
       </Animated.View>
 
