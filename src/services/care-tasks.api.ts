@@ -1,6 +1,6 @@
 import { careHomeApiClient } from '@/src/lib/api-client';
 import type { ApiSuccessEnvelope } from '@/src/types/auth.types';
-import type { CareTaskDto, CareTaskStatus } from '@/src/types/care-task.types';
+import type { CareTaskDto, CareTaskStatus, CreateCareTaskPayload } from '@/src/types/care-task.types';
 import { cachedOnlineFirst, queueWhenOffline } from '@/src/offline/offline-api';
 
 export async function getCareTasks(params?: {
@@ -31,4 +31,12 @@ export async function recordCareTaskOutcome(
     saved = response.data.data;
   });
   return { saved, ...result };
+}
+
+export async function createCareTask(payload: CreateCareTaskPayload) {
+  const { data } = await careHomeApiClient.post<ApiSuccessEnvelope<CareTaskDto>>(
+    '/carehome/care-tasks',
+    payload,
+  );
+  return data.data;
 }

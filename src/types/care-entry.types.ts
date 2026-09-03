@@ -56,6 +56,7 @@ export interface CareEntryDto {
   lastEditedBy?: CareEntryConfirmedByDto | null;
   lastEditedAt?: string | null;
   createdAt: string | null;
+  handoverRequired: boolean;
 }
 
 export interface ExtractCareEntryResult {
@@ -71,12 +72,14 @@ export interface CreateCareEntryPayload {
   extractedItems?: CareEntryItemDto[];
   usedOpenAI?: boolean;
   model?: string | null;
+  handoverRequired?: boolean;
 }
 
 export interface UpdateCareEntryPayload {
   rawText: string;
   items: CareEntryItemDto[];
   changeReason: string;
+  handoverRequired?: boolean;
 }
 
 export interface QueryCareEntriesParams {

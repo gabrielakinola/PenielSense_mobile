@@ -17,9 +17,10 @@ export async function getCareHomeReviewFlags(params?: QueryReviewFlagsParams) {
 export async function closeCareHomeReviewFlag(
   flagId: string,
   reviewStatus: ApiManualCloseReviewFlagStatus,
+  details?: { residentChecked?: boolean; actionTaken?: string },
 ) {
   const { data } = await careHomeApiClient.patch<
     ApiSuccessEnvelope<ApiReviewFlagDto>
-  >(`/carehome/review-flags/${flagId}`, { reviewStatus });
+  >(`/carehome/review-flags/${flagId}`, { reviewStatus, ...details });
   return data.data;
 }

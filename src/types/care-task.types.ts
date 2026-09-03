@@ -18,3 +18,13 @@ export interface CareTaskDto {
   completedAt: string | null;
   version: number;
 }
+
+export interface CreateCareTaskPayload {
+  residentId: string;
+  carePlanId?: string;
+  title: string;
+  category: string;
+  instructions: string;
+  dueAt: string;
+  priority: 'ROUTINE' | 'IMPORTANT' | 'URGENT';
+}

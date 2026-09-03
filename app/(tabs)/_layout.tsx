@@ -20,7 +20,7 @@ const TAB_CONFIG = [
   { name: 'index', title: 'Today', icon: Home },
   { name: 'residents', title: 'Residents', icon: Users },
   { name: 'tasks', title: 'Tasks', icon: ListChecks },
-  { name: 'flags', title: 'Flags', icon: Flag },
+  { name: 'flags', title: 'Alerts', icon: Flag },
   { name: 'handovers', title: 'Handover', icon: ClipboardList },
   { name: 'profile', title: 'Profile', icon: User },
 ] as const;
@@ -202,7 +202,7 @@ export default function TabLayout() {
         name="tasks"
         options={{ title: 'Tasks', href: isManager ? null : undefined }}
       />
-      <Tabs.Screen name="flags" options={{ title: isManager ? 'Review' : 'Flags' }} />
+      <Tabs.Screen name="flags" options={{ title: isManager ? 'Review' : 'Alerts' }} />
       <Tabs.Screen name="handovers" options={{ title: 'Handovers' }} />
       <Tabs.Screen name="profile" options={{ title: 'Profile' }} />
     </Tabs>

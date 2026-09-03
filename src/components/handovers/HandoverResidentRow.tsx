@@ -1,6 +1,6 @@
 import { Pressable, Text, View } from 'react-native';
 import Animated from 'react-native-reanimated';
-import { ChevronRight } from 'lucide-react-native';
+import { ChevronRight, MessageSquareText } from 'lucide-react-native';
 import { Card } from '@/src/components/ui/Card';
 import { IntelligenceStatusChip } from '@/src/components/residents/IntelligenceStatusChip';
 import { listItemEnter } from '@/src/animations/presets';
@@ -91,6 +91,16 @@ export function HandoverResidentRow({
                   {resident.reviewFlags.length === 1 ? '' : 's'}
                 </Text>
               ) : null}
+              {(resident.handoverNotes ?? []).map((note) => (
+                <View key={note.id} style={{ marginTop: 10, padding: 10, borderRadius: 10, backgroundColor: colors.statusBg.watch, flexDirection: 'row', gap: 8 }}>
+                  <MessageSquareText size={17} color={colors.status.watch} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ ...typography.label, color: colors.status.watch, fontWeight: '700' }}>STAFF HANDOVER NOTE</Text>
+                    <Text style={{ ...typography.caption, color: colors.text, marginTop: 3 }}>{note.summary}</Text>
+                    <Text style={{ ...typography.label, color: colors.secondary, marginTop: 4 }}>{note.recordedBy}</Text>
+                  </View>
+                </View>
+              ))}
               <View
                 style={{
                   flexDirection: 'row',

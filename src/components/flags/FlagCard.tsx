@@ -131,9 +131,9 @@ export function FlagCard({
             >
               <View style={{ flex: 1 }}>
                 <AnimatedButton
-                  label="Reviewed"
+                  label="Check & respond"
                   size="md"
-                  onPress={() => confirmClose('reviewed')}
+                  onPress={onOpenResident}
                   disabled={closing}
                 />
               </View>

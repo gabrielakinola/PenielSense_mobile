@@ -1,5 +1,5 @@
 import { Alert, Pressable, Text, TextInput, View } from 'react-native';
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ClipboardList, Plus, Save, Trash2 } from 'lucide-react-native';
@@ -28,6 +28,7 @@ const emptySection = (): CarePlanSectionDto => ({
 export default function CarePlanScreen() {
   const { id = '' } = useLocalSearchParams<{ id: string }>();
   const colors = useThemeColors();
+  const router = useRouter();
   const queryClient = useQueryClient();
   const isManager = isCareHomeManagerRole(useAuthStore((state) => state.user?.role));
   const query = useQuery({ queryKey: ['carehome', 'care-plan', id], queryFn: () => getCarePlan(id), enabled: !!id });
@@ -89,6 +90,7 @@ export default function CarePlanScreen() {
         ))}
         {isManager ? (
           <>
+            <Pressable onPress={() => router.push(`/residents/${id}/create-task`)} style={{ minHeight: 48, borderRadius: radius.md, backgroundColor: `${colors.primary}16`, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 7, marginBottom: 12 }}><ClipboardList size={18} color={colors.primary} /><Text style={{ ...typography.bodyMedium, color: colors.primary }}>Create task for this resident</Text></Pressable>
             <Pressable onPress={() => setSections((items) => [...items, emptySection()])} style={{ minHeight: 46, borderRadius: radius.md, borderWidth: 1, borderColor: colors.primary, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 7 }}><Plus size={18} color={colors.primary} /><Text style={{ ...typography.bodyMedium, color: colors.primary }}>Add care-plan section</Text></Pressable>
             <Text style={{ ...typography.label, color: colors.secondary, marginTop: 18 }}>Reason for this version</Text>
             <TextInput value={changeReason} onChangeText={setChangeReason} style={inputStyle} placeholder="What changed and why?" placeholderTextColor={colors.secondary} />

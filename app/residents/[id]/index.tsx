@@ -1,115 +1,55 @@
-import { Platform, KeyboardAvoidingView, Pressable, Text } from 'react-native';
+import { useMemo, useState } from 'react';
+import { Modal, Pressable, Text, View } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { AlertTriangle, ChevronLeft, FileText } from 'lucide-react-native';
 import { useQuery } from '@tanstack/react-query';
+import { AlertTriangle, BookHeart, ChevronRight, CirclePlus, ClipboardList, FileHeart, FileText, HeartPulse, History, MessageSquarePlus, ShieldAlert, UserRound, UsersRound, X } from 'lucide-react-native';
 import { ScreenContainer } from '@/src/components/ui/ScreenContainer';
-import { ResidentCareBriefPanel } from '@/src/components/residents/ResidentCareBriefPanel';
-import { CareEntryPanel } from '@/src/components/residents/CareEntryPanel';
+import { Card } from '@/src/components/ui/Card';
+import { SkeletonCard } from '@/src/components/ui/Skeleton';
 import { getResidentCareBrief } from '@/src/services/intelligence.api';
-import { getResidentCareProfile } from '@/src/services/residents.api';
-import { ResidentAtAGlance } from '@/src/components/residents/ResidentAtAGlance';
+import { getResidentCareProfile, getCareHomeResidentById } from '@/src/services/residents.api';
+import { getCareEntries } from '@/src/services/care-entries.api';
+import { getCareTasks } from '@/src/services/care-tasks.api';
 import { useThemeColors } from '@/src/hooks/use-theme-colors';
-import { MIN_TOUCH_TARGET } from '@/src/constants/app';
 import { typography } from '@/src/theme/typography';
 import { radius } from '@/src/theme/radius';
+import { careEntryCategoryLabel, CARE_ENTRY_CATEGORY_OPTIONS, type CareEntryCategory } from '@/src/types/care-entry.types';
 
 export default function ResidentDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const residentId = id ?? '';
-  const router = useRouter();
-  const colors = useThemeColors();
-
-  const briefQuery = useQuery({
-    queryKey: ['carehome', 'care-brief', residentId],
-    queryFn: () => getResidentCareBrief(residentId),
-    enabled: !!residentId,
-  });
-
-  const profileQuery = useQuery({
-    queryKey: ['carehome', 'resident-care-profile', residentId],
-    queryFn: () => getResidentCareProfile(residentId),
-    enabled: !!residentId,
-  });
-
-  return (
-    <>
-      <Stack.Screen
-        options={{
-          title: briefQuery.data?.displayName ?? 'Resident',
-          headerLeft: () => (
-            <Pressable
-              onPress={() => router.back()}
-              accessibilityRole="button"
-              accessibilityLabel="Back"
-              hitSlop={8}
-              style={{
-                minHeight: MIN_TOUCH_TARGET,
-                minWidth: MIN_TOUCH_TARGET,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <ChevronLeft size={28} color={colors.text} />
-            </Pressable>
-          ),
-        }}
-      />
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <ScreenContainer keyboardShouldPersistTaps="handled">
-          <ResidentAtAGlance
-            profile={profileQuery.data}
-            isLoading={profileQuery.isLoading}
-          />
-          <Pressable
-            onPress={() => router.push(`/residents/${residentId}/report`)}
-            accessibilityRole="button"
-            accessibilityLabel="Open combined care evidence report"
-            style={{
-              minHeight: 48, borderRadius: radius.md, borderWidth: 1,
-              borderColor: colors.primary, flexDirection: 'row', alignItems: 'center',
-              justifyContent: 'center', gap: 8, marginBottom: 10,
-            }}
-          >
-            <FileText size={18} color={colors.primary} />
-            <Text style={{ ...typography.bodyMedium, color: colors.primary }}>
-              Combined care evidence report
-            </Text>
-          </Pressable>
-          <Pressable
-            onPress={() => router.push(`/residents/${residentId}/incident`)}
-            accessibilityRole="button"
-            accessibilityLabel="Report an incident or safeguarding concern"
-            style={{
-              minHeight: 48,
-              borderRadius: radius.md,
-              borderWidth: 1,
-              borderColor: colors.status.critical,
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 8,
-              marginBottom: 16,
-            }}
-          >
-            <AlertTriangle size={18} color={colors.status.critical} />
-            <Text style={{ ...typography.bodyMedium, color: colors.status.critical }}>
-              Report concern or incident
-            </Text>
-          </Pressable>
-          {residentId ? <CareEntryPanel residentId={residentId} /> : null}
-          <ResidentCareBriefPanel
-            brief={briefQuery.data}
-            isLoading={briefQuery.isLoading}
-            isFetching={briefQuery.isFetching}
-            isError={briefQuery.isError}
-            error={briefQuery.error}
-            onRetry={() => void briefQuery.refetch()}
-          />
-        </ScreenContainer>
-      </KeyboardAvoidingView>
-    </>
-  );
+  const { id = '' } = useLocalSearchParams<{ id: string }>(); const router = useRouter(); const colors = useThemeColors();
+  const [tab, setTab] = useState<'timeline' | 'about'>('timeline'); const [filter, setFilter] = useState<CareEntryCategory | 'ALL'>('ALL'); const [actions, setActions] = useState(false);
+  const resident = useQuery({ queryKey: ['carehome', 'resident', id], queryFn: () => getCareHomeResidentById(id), enabled: !!id });
+  const profile = useQuery({ queryKey: ['carehome', 'resident-care-profile', id], queryFn: () => getResidentCareProfile(id), enabled: !!id });
+  const brief = useQuery({ queryKey: ['carehome', 'care-brief', id], queryFn: () => getResidentCareBrief(id), enabled: !!id });
+  const notes = useQuery({ queryKey: ['carehome', 'care-entries', id, 'timeline'], queryFn: () => getCareEntries(id, { limit: 100, page: 1 }), enabled: !!id });
+  const tasks = useQuery({ queryKey: ['carehome', 'care-tasks', id], queryFn: () => getCareTasks({ residentId: id }), enabled: !!id });
+  const timeline = useMemo(() => {
+    const n = (notes.data?.items ?? []).flatMap(note => note.confirmedItems.map((item, i) => ({ id: `${note.id}-${i}`, at: note.confirmedAt, category: item.category, title: careEntryCategoryLabel(item.category), detail: item.summary, source: `Staff · ${note.confirmedBy.firstName}` })));
+    const t = (tasks.data ?? []).filter(x => x.status !== 'PENDING').map(x => ({ id: `task-${x.id}`, at: x.completedAt ?? x.dueAt, category: x.category as CareEntryCategory, title: x.title, detail: x.outcomeNote || x.status.replace('_', ' '), source: 'Care task' }));
+    return [...n, ...t].filter(x => filter === 'ALL' || x.category === filter).sort((a, b) => +new Date(b.at) - +new Date(a.at));
+  }, [filter, notes.data, tasks.data]);
+  const p = profile.data; const name = resident.data?.fullName ?? brief.data?.displayName ?? 'Resident';
+  const about = [
+    [UserRound, 'Profile & About Me', p?.aboutMe?.whatMatters || 'Preferences, communication and what matters'],
+    [BookHeart, 'Care plan', 'Needs, outcomes and support instructions', `/residents/${id}/care-plan`],
+    [HeartPulse, 'Health history', (p?.healthConditions ?? []).join(' · ') || 'Conditions and health information'],
+    [ShieldAlert, 'Risks & allergies', (p?.allergies ?? []).join(' · ') || 'Risks, controls and allergies'],
+    [AlertTriangle, 'Incidents', 'Reported concerns and review history', `/residents/${id}/incident`],
+    [FileHeart, 'Wellbeing reports', 'Sensor and care-note evidence', `/residents/${id}/report`],
+    [UsersRound, 'Contacts & GP', p?.gpName || 'Key contacts and GP details'],
+    [History, 'Consent, capacity & DoLS', p?.capacitySummary || 'Current decisions and authorisations'],
+  ] as const;
+  return <><Stack.Screen options={{ title: name }} /><View style={{ flex: 1, backgroundColor: colors.background }}><ScreenContainer>
+    <Text style={{ ...typography.title, color: colors.text }}>{name}</Text><Text style={{ ...typography.caption, color: colors.secondary, marginBottom: 8 }}>{resident.data?.room ?? brief.data?.room}</Text>
+    <View style={{ flexDirection: 'row', gap: 6, marginBottom: 12 }}>{p?.allergies.length ? <Badge label="ALLERGY" /> : null}{p?.risks.some(r => r.level === 'HIGH' || r.level === 'CRITICAL') ? <Badge label="HIGH RISK" /> : null}</View>
+    <View style={{ flexDirection: 'row', borderRadius: radius.md, padding: 3, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, marginBottom: 14 }}>{(['timeline', 'about'] as const).map(v => <Pressable key={v} onPress={() => setTab(v)} style={{ flex: 1, minHeight: 42, alignItems: 'center', justifyContent: 'center', borderRadius: radius.sm, backgroundColor: tab === v ? colors.primary : 'transparent' }}><Text style={{ ...typography.bodyMedium, color: tab === v ? '#FFF' : colors.secondary, textTransform: 'capitalize' }}>{v}</Text></Pressable>)}</View>
+    {tab === 'timeline' ? <>{brief.isLoading ? <SkeletonCard lines={3} /> : brief.data ? <Card style={{ marginBottom: 14, borderLeftWidth: 3, borderLeftColor: brief.data.statusTone === 'stable' ? colors.status.good : colors.status.watch }}><Text style={{ ...typography.label, color: brief.data.statusTone === 'stable' ? colors.status.good : colors.status.watch }}>{brief.data.statusLabel.toUpperCase()} · TODAY’S BRIEF</Text><Text style={{ ...typography.body, color: colors.text, marginTop: 7 }}>{brief.data.currentSummary}</Text>{brief.data.statusTone !== 'stable' ? <Pressable onPress={() => router.push('/(tabs)/flags')} style={{ marginTop: 12, minHeight: 42, borderRadius: radius.md, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' }}><Text style={{ ...typography.bodyMedium, color: '#FFF' }}>Review sensor alerts</Text></Pressable> : null}</Card> : null}
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginBottom: 14 }}><Filter label="All" selected={filter === 'ALL'} onPress={() => setFilter('ALL')} />{CARE_ENTRY_CATEGORY_OPTIONS.slice(0, 8).map(o => <Filter key={o.value} label={o.label} selected={filter === o.value} onPress={() => setFilter(o.value)} />)}</View>
+      <Card style={{ padding: 0, overflow: 'hidden' }}>{timeline.length ? timeline.map((item, i) => <View key={item.id} style={{ flexDirection: 'row', padding: 14, borderBottomWidth: i === timeline.length - 1 ? 0 : 1, borderBottomColor: colors.border, gap: 12 }}><View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.statusBg.good, alignItems: 'center', justifyContent: 'center' }}><ClipboardList size={18} color={colors.status.good} /></View><View style={{ flex: 1 }}><View style={{ flexDirection: 'row', justifyContent: 'space-between' }}><Text style={{ ...typography.bodyMedium, color: colors.text }}>{item.title}</Text><Text style={{ ...typography.label, color: colors.secondary }}>{new Date(item.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text></View><Text style={{ ...typography.caption, color: colors.text, marginTop: 3 }}>{item.detail}</Text><Text style={{ ...typography.label, color: colors.secondary, marginTop: 5 }}>{item.source}</Text></View></View>) : <Text style={{ ...typography.caption, color: colors.secondary, padding: 18, textAlign: 'center' }}>No timeline entries for this filter.</Text>}</Card>
+    </> : <View style={{ gap: 9 }}>{about.map(([Icon, label, detail, route]) => <Pressable key={label} onPress={() => route && router.push(route as never)}><Card style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}><View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: colors.statusBg.good, alignItems: 'center', justifyContent: 'center' }}><Icon size={20} color={colors.primary} /></View><View style={{ flex: 1 }}><Text style={{ ...typography.bodyMedium, color: colors.text }}>{label}</Text><Text numberOfLines={2} style={{ ...typography.caption, color: colors.secondary }}>{detail}</Text></View><ChevronRight size={18} color={colors.secondary} /></Card></Pressable>)}</View>}
+  </ScreenContainer><Pressable onPress={() => setActions(true)} accessibilityLabel="Record care" style={{ position: 'absolute', right: 20, bottom: 22, width: 58, height: 58, borderRadius: 29, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' }}><CirclePlus size={30} color="#FFF" /></Pressable></View>
+  <Modal visible={actions} transparent animationType="slide" onRequestClose={() => setActions(false)}><Pressable onPress={() => setActions(false)} style={{ flex: 1, backgroundColor: 'rgba(15,23,42,.42)', justifyContent: 'flex-end' }}><Pressable style={{ backgroundColor: colors.surfaceElevated, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20 }}><View style={{ flexDirection: 'row', justifyContent: 'space-between' }}><Text style={{ ...typography.heading, color: colors.text }}>Add to {name.split(' ')[0]}’s record</Text><X onPress={() => setActions(false)} color={colors.secondary} /></View><Action icon={MessageSquarePlus} label="Record care note" onPress={() => { setActions(false); router.push(`/residents/${id}/record-note`); }} /><Action icon={AlertTriangle} label="Report incident or concern" onPress={() => { setActions(false); router.push(`/residents/${id}/incident`); }} /><Action icon={FileText} label="Record observation" onPress={() => { setActions(false); router.push(`/residents/${id}/record-note`); }} /><Action icon={ClipboardList} label="Add handover note" onPress={() => { setActions(false); router.push(`/residents/${id}/record-note?handover=1`); }} /></Pressable></Pressable></Modal></>;
 }
+function Badge({ label }: { label: string }) { const c = useThemeColors(); return <View style={{ paddingHorizontal: 9, paddingVertical: 4, borderRadius: 99, backgroundColor: c.statusBg.critical }}><Text style={{ ...typography.label, color: c.status.critical, fontWeight: '700' }}>{label}</Text></View>; }
+function Filter({ label, selected, onPress }: { label: string; selected: boolean; onPress: () => void }) { const c = useThemeColors(); return <Pressable onPress={onPress} style={{ paddingHorizontal: 11, paddingVertical: 7, borderRadius: 99, backgroundColor: selected ? c.primary : c.surface, borderWidth: 1, borderColor: selected ? c.primary : c.border }}><Text style={{ ...typography.label, color: selected ? '#FFF' : c.secondary }}>{label}</Text></Pressable>; }
+function Action({ icon: Icon, label, onPress }: { icon: typeof FileText; label: string; onPress: () => void }) { const c = useThemeColors(); return <Pressable onPress={() => { onPress(); }} style={{ minHeight: 58, flexDirection: 'row', alignItems: 'center', gap: 13, borderBottomWidth: 1, borderBottomColor: c.border }}><Icon size={22} color={c.primary} /><Text style={{ ...typography.bodyMedium, color: c.text, flex: 1 }}>{label}</Text><ChevronRight size={18} color={c.secondary} /></Pressable>; }

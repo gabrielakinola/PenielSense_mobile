@@ -5,6 +5,7 @@ import {
   Text,
   TextInput,
   View,
+  Switch,
 } from 'react-native';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Trash2 } from 'lucide-react-native';
@@ -39,12 +40,14 @@ interface CareEntryComposerProps {
   residentId: string;
   editingEntry?: CareEntryDto | null;
   onCancelEdit?: () => void;
+  initialHandover?: boolean;
 }
 
 export function CareEntryComposer({
   residentId,
   editingEntry = null,
   onCancelEdit,
+  initialHandover = false,
 }: CareEntryComposerProps) {
   const colors = useThemeColors();
   const theme = useResolvedTheme();
@@ -60,6 +63,7 @@ export function CareEntryComposer({
   const [model, setModel] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [changeReason, setChangeReason] = useState('');
+  const [handoverRequired, setHandoverRequired] = useState(initialHandover);
 
   const nextKey = () => {
     keySeq.current += 1;
@@ -88,6 +92,7 @@ export function CareEntryComposer({
     setStep('compose');
     setFormError(null);
     setChangeReason('');
+    setHandoverRequired(initialHandover);
     onCancelEdit?.();
   };
 
@@ -106,6 +111,7 @@ export function CareEntryComposer({
     setExtractedItems(editingEntry.extractedItems ?? []);
     setUsedOpenAI(false);
     setModel(null);
+    setHandoverRequired(editingEntry.handoverRequired ?? false);
     setStep('review');
   }, [editingEntry]);
 
@@ -141,6 +147,7 @@ export function CareEntryComposer({
         extractedItems,
         usedOpenAI,
         model,
+        handoverRequired,
       }),
     onSuccess: async () => {
       resetComposer();
@@ -163,6 +170,7 @@ export function CareEntryComposer({
           summary: item.summary.trim(),
         })),
         changeReason: changeReason.trim(),
+        handoverRequired,
       });
     },
     onSuccess: async () => {
@@ -386,6 +394,13 @@ export function CareEntryComposer({
           </Pressable>
 
           <View style={{ gap: 8 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, borderWidth: 1, borderColor: handoverRequired ? colors.primary : colors.border, borderRadius: radius.md, backgroundColor: handoverRequired ? `${colors.primary}12` : 'transparent' }}>
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text style={{ ...typography.bodyMedium, color: colors.text }}>Highlight for handover</Text>
+                <Text style={{ ...typography.caption, color: colors.secondary }}>Show this update prominently to the next shift.</Text>
+              </View>
+              <Switch value={handoverRequired} onValueChange={setHandoverRequired} trackColor={{ false: colors.border, true: `${colors.primary}88` }} thumbColor={handoverRequired ? colors.primary : colors.secondary} accessibilityLabel="Highlight for handover" />
+            </View>
             {editingId ? <>
               <Text style={{ ...typography.label, color: colors.secondary }}>
                 Reason for correction

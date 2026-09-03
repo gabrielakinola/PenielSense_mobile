@@ -72,7 +72,7 @@ export default function FlagsScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <ScreenHeader title={isManager ? 'Review' : 'Review Flags'} />
+      <ScreenHeader title={isManager ? 'Review' : 'Alerts'} />
       <ScreenContainer scroll={false} padded={false}>
         <FlatList
           data={flagsQuery.isFetching && items.length === 0 ? [] : items}
@@ -89,9 +89,9 @@ export default function FlagsScreen() {
           ListHeaderComponent={
             <View>
               <PageIntro
-              eyebrow="Vitals review"
-              title={isManager ? 'Manager review inbox' : 'Open review flags'}
-              subtitle={isManager ? 'Exceptions and concerns requiring management attention.' : 'Close flags once checked — or mark them as false alarms.'}
+              eyebrow="Care intelligence"
+              title={isManager ? 'Manager review inbox' : 'Sensor alerts'}
+              subtitle={isManager ? 'Exceptions and concerns requiring management attention.' : 'Check the resident, record what you did, then acknowledge the alert.'}
               footer={
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                   <View
@@ -193,7 +193,7 @@ export default function FlagsScreen() {
               flag={item}
               index={index}
               closing={closeMutation.isPending}
-              onOpenResident={() => router.push(`/residents/${item.residentId}`)}
+              onOpenResident={() => router.push(`/alerts/${item.id}`)}
               onClose={(reviewStatus) =>
                 closeMutation.mutate({ flagId: item.id, reviewStatus })
               }

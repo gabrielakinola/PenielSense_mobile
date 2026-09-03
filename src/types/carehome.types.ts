@@ -223,6 +223,8 @@ export interface ApiReviewFlagDto {
   occurrenceCount?: number;
   lastSeenAt?: string;
   reviewedAt?: string | null;
+  residentChecked?: boolean;
+  actionTaken?: string;
   source: string;
   createdAt: string;
 }
@@ -262,6 +264,12 @@ export interface HandoverResidentCard {
     value: number;
     message: string;
     createdAt: string;
+  }>;
+  handoverNotes: Array<{
+    id: string;
+    at: string;
+    summary: string;
+    recordedBy: string;
   }>;
   connectedDevices: string[];
 }
