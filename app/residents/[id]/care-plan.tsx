@@ -397,6 +397,36 @@ export default function CarePlanScreen() {
                   )}
                 </View>
               ))}
+            {isManager && section.supportInstructions.trim() ? (
+              <Pressable
+                onPress={() =>
+                  router.push({
+                    pathname: `/residents/${id}/create-task`,
+                    params: {
+                      title: section.category
+                        .replaceAll("_", " ")
+                        .toLowerCase(),
+                      category: section.category,
+                      instructions: section.supportInstructions,
+                    },
+                  })
+                }
+                style={{
+                  minHeight: 44,
+                  borderRadius: radius.md,
+                  backgroundColor: `${colors.primary}12`,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  marginTop: 12,
+                }}
+              >
+                <Text
+                  style={{ ...typography.bodyMedium, color: colors.primary }}
+                >
+                  Create task from this section
+                </Text>
+              </Pressable>
+            ) : null}
             {isManager ? (
               <Pressable
                 onPress={() =>

@@ -48,11 +48,16 @@ import {
   type CareEntryCategory,
 } from "@/src/types/care-entry.types";
 import { ResidentWorkspaceHeader } from "@/src/components/residents/ResidentWorkspaceHeader";
+import { useAuthStore } from "@/src/stores/auth-store";
+import { isCareHomeManagerRole } from "@/src/lib/care-home-home";
 
 export default function ResidentDetailScreen() {
   const { id = "" } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const colors = useThemeColors();
+  const isManager = isCareHomeManagerRole(
+    useAuthStore((state) => state.user?.role),
+  );
   const [tab, setTab] = useState<"timeline" | "about">("timeline");
   const [filter, setFilter] = useState<CareEntryCategory | "ALL">("ALL");
   const [actions, setActions] = useState(false);
@@ -133,6 +138,16 @@ export default function ResidentDetailScreen() {
       "Needs, outcomes and support instructions",
       `/residents/${id}/care-plan`,
     ],
+    ...(isManager
+      ? [
+          [
+            ClipboardList,
+            "Create task",
+            "Schedule one-off or recurring care",
+            `/residents/${id}/create-task`,
+          ] as const,
+        ]
+      : []),
     [
       HeartPulse,
       "Health history",

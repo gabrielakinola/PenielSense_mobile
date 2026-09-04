@@ -34,9 +34,28 @@ const dueOptions = [
   { label: "End of shift", hours: 8 },
   { label: "Tomorrow", hours: 24 },
 ];
+const repeatOptions = [
+  { key: "MORNING", label: "Every morning", times: ["08:00"] },
+  { key: "TWICE", label: "Twice daily", times: ["08:00", "20:00"] },
+  {
+    key: "FOUR",
+    label: "Morning, lunch, tea & bedtime",
+    times: ["08:00", "12:00", "16:00", "20:00"],
+  },
+] as const;
 
 export default function CreateTaskScreen() {
-  const { id = "" } = useLocalSearchParams<{ id: string }>();
+  const {
+    id = "",
+    title: suggestedTitle = "",
+    category: suggestedCategory = "",
+    instructions: suggestedInstructions = "",
+  } = useLocalSearchParams<{
+    id: string;
+    title?: string;
+    category?: string;
+    instructions?: string;
+  }>();
   const colors = useThemeColors();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -45,12 +64,17 @@ export default function CreateTaskScreen() {
     queryFn: () => getCareHomeResidentById(id),
     enabled: !!id,
   });
-  const [title, setTitle] = useState("");
-  const [instructions, setInstructions] = useState("");
-  const [category, setCategory] = useState("PERSONAL_CARE");
+  const [title, setTitle] = useState(suggestedTitle);
+  const [instructions, setInstructions] = useState(suggestedInstructions);
+  const [category, setCategory] = useState(
+    suggestedCategory || "PERSONAL_CARE",
+  );
   const [priority, setPriority] =
     useState<(typeof priorities)[number]>("ROUTINE");
   const [dueHours, setDueHours] = useState(4);
+  const [recurring, setRecurring] = useState(false);
+  const [repeatKey, setRepeatKey] =
+    useState<(typeof repeatOptions)[number]["key"]>("MORNING");
   const mutation = useMutation({
     mutationFn: () =>
       createCareTask({
@@ -60,6 +84,10 @@ export default function CreateTaskScreen() {
         category,
         priority,
         dueAt: new Date(Date.now() + dueHours * 3600000).toISOString(),
+        recurrence: recurring ? "DAILY" : "ONCE",
+        scheduleTimes: recurring
+          ? [...repeatOptions.find((item) => item.key === repeatKey)!.times]
+          : undefined,
       }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({
@@ -220,6 +248,59 @@ export default function CreateTaskScreen() {
               ),
             )}
           </View>
+          <Text
+            style={{
+              ...typography.label,
+              color: colors.secondary,
+              marginTop: 14,
+            }}
+          >
+            Repeats
+          </Text>
+          <View style={{ flexDirection: "row", gap: 7, marginTop: 8 }}>
+            {chip("One-off", !recurring, () => setRecurring(false))}
+            {chip("Every day", recurring, () => setRecurring(true))}
+          </View>
+          {recurring ? (
+            <View style={{ marginTop: 8, gap: 7 }}>
+              {repeatOptions.map((option) => (
+                <Pressable
+                  key={option.key}
+                  onPress={() => setRepeatKey(option.key)}
+                  style={{
+                    padding: 12,
+                    borderRadius: radius.md,
+                    borderWidth: 1,
+                    borderColor:
+                      repeatKey === option.key ? colors.primary : colors.border,
+                    backgroundColor:
+                      repeatKey === option.key
+                        ? `${colors.primary}12`
+                        : "transparent",
+                  }}
+                >
+                  <Text
+                    style={{
+                      ...typography.bodyMedium,
+                      color:
+                        repeatKey === option.key ? colors.primary : colors.text,
+                    }}
+                  >
+                    {option.label}
+                  </Text>
+                  <Text
+                    style={{
+                      ...typography.caption,
+                      color: colors.secondary,
+                      marginTop: 3,
+                    }}
+                  >
+                    {option.times.join(" · ")}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          ) : null}
           <Pressable
             disabled={!valid}
             onPress={() => mutation.mutate()}

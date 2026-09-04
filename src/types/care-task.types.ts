@@ -1,6 +1,11 @@
 export type CareTaskStatus =
-  | 'PENDING' | 'COMPLETED' | 'PARTIAL' | 'DECLINED'
-  | 'NOT_REQUIRED' | 'UNABLE' | 'ESCALATED';
+  | "PENDING"
+  | "COMPLETED"
+  | "PARTIAL"
+  | "DECLINED"
+  | "NOT_REQUIRED"
+  | "UNABLE"
+  | "ESCALATED";
 
 export interface CareTaskDto {
   id: string;
@@ -10,14 +15,17 @@ export interface CareTaskDto {
   category: string;
   instructions: string;
   dueAt: string;
-  priority: 'ROUTINE' | 'IMPORTANT' | 'URGENT';
+  priority: "ROUTINE" | "IMPORTANT" | "URGENT";
+  recurrence: "ONCE" | "DAILY";
+  scheduledTime: string | null;
   status: CareTaskStatus;
   outcomeNote: string;
   quantity: string;
   completedBy: string | null;
   completedAt: string | null;
   version: number;
-  workflow?: import('@/src/services/manager-review.api').ManagerReviewWorkflow | null;
+  workflow?:
+    import("@/src/services/manager-review.api").ManagerReviewWorkflow | null;
 }
 
 export interface CreateCareTaskPayload {
@@ -27,5 +35,7 @@ export interface CreateCareTaskPayload {
   category: string;
   instructions: string;
   dueAt: string;
-  priority: 'ROUTINE' | 'IMPORTANT' | 'URGENT';
+  priority: "ROUTINE" | "IMPORTANT" | "URGENT";
+  recurrence?: "ONCE" | "DAILY";
+  scheduleTimes?: string[];
 }
