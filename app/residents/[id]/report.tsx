@@ -15,10 +15,17 @@ import {
 import { normalizeApiError } from "@/src/lib/api-client";
 import { useThemeColors } from "@/src/hooks/use-theme-colors";
 import { typography } from "@/src/theme/typography";
+import { getCareHomeResidentById } from "@/src/services/residents.api";
+import { ResidentWorkspaceHeader } from "@/src/components/residents/ResidentWorkspaceHeader";
 
 export default function ResidentEvidenceReportScreen() {
   const { id = "" } = useLocalSearchParams<{ id: string }>();
   const colors = useThemeColors();
+  const resident = useQuery({
+    queryKey: ["carehome", "resident", id],
+    queryFn: () => getCareHomeResidentById(id),
+    enabled: !!id,
+  });
   const handover = useQuery({
     queryKey: ["carehome", "handovers", "active"],
     queryFn: () => getActiveHandover(),
@@ -85,7 +92,7 @@ export default function ResidentEvidenceReportScreen() {
   const lines = data
     ? [
         `${data.resident.name} — ${data.period.windowLabel}`,
-    currentSummary ?? data.intelligence.summary,
+        currentSummary ?? data.intelligence.summary,
         "",
         "Confirmed care notes:",
         ...data.careContext.notes.flatMap((note) =>
@@ -112,6 +119,12 @@ export default function ResidentEvidenceReportScreen() {
     <>
       <Stack.Screen options={{ title: "Evidence report" }} />
       <ScreenContainer>
+        {resident.data ? (
+          <ResidentWorkspaceHeader
+            resident={resident.data}
+            active="wellbeing"
+          />
+        ) : null}
         {handover.isLoading || report.isLoading || careBrief.isLoading ? (
           <SkeletonCard lines={6} />
         ) : !handover.data ? (
