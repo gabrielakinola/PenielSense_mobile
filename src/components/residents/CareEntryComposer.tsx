@@ -199,12 +199,17 @@ export function CareEntryComposer({
   });
 
   const canExtract = rawText.trim().length >= 3 && !extractMutation.isPending;
+  const hasFluidItem = draftItems.some((item) => item.category === "FLUID");
+  const fluidObservationIndex = observations.findIndex(
+    (observation) => observation.kind === "FLUID_INTAKE" && observation.unit === "ML",
+  );
   const saving = saveMutation.isPending || updateMutation.isPending;
   const editingId = editingEntry?.id ?? null;
   const canSave =
     rawText.trim().length > 0 &&
     draftItems.length > 0 &&
     draftItems.every((item) => item.summary.trim().length > 0) &&
+    (!hasFluidItem || fluidObservationIndex >= 0) &&
     (!editingId || changeReason.trim().length >= 3) &&
     !saving;
 
@@ -414,6 +419,46 @@ export function CareEntryComposer({
             </Text>
           </Pressable>
 
+          {hasFluidItem ? (
+            <View
+              style={{
+                borderRadius: radius.lg,
+                borderWidth: 1,
+                borderColor: fluidObservationIndex >= 0 ? colors.primary : colors.status.watch,
+                backgroundColor: fluidObservationIndex >= 0 ? `${colors.primary}0D` : colors.statusBg.watch,
+                padding: 12,
+                gap: 8,
+              }}
+            >
+              <Text style={{ ...typography.bodyMedium, color: colors.text }}>
+                How much fluid was taken?
+              </Text>
+              <Text style={{ ...typography.caption, color: colors.secondary }}>
+                Enter the amount actually taken in ml. Enter 0 if none was taken or the drink was declined.
+              </Text>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 9 }}>
+                <TextInput
+                  value={fluidObservationIndex >= 0 ? String(observations[fluidObservationIndex].value) : ""}
+                  onChangeText={(value) => {
+                    const cleaned = value.replace(/[^0-9.]/g, "");
+                    if (!cleaned) {
+                      setObservations((rows) => rows.filter((row) => !(row.kind === "FLUID_INTAKE" && row.unit === "ML")));
+                      return;
+                    }
+                    const next = { kind: "FLUID_INTAKE" as const, value: Number(cleaned), unit: "ML" as const, label: "Fluid taken" };
+                    setObservations((rows) => fluidObservationIndex >= 0 ? rows.map((row, index) => index === fluidObservationIndex ? next : row) : [...rows, next]);
+                  }}
+                  keyboardType="decimal-pad"
+                  placeholder="e.g. 250"
+                  placeholderTextColor={colors.secondary}
+                  accessibilityLabel="Fluid taken in millilitres"
+                  style={{ ...inputStyle, minHeight: 46, width: 112, textAlignVertical: "center", textAlign: "center" }}
+                />
+                <Text style={{ ...typography.bodyMedium, color: colors.text }}>ml taken</Text>
+              </View>
+            </View>
+          ) : null}
+
           {observations.length ? (
             <View
               style={{
@@ -440,7 +485,7 @@ export function CareEntryComposer({
                   Correct or remove anything that is wrong.
                 </Text>
               </View>
-              {observations.map((observation, index) => (
+              {observations.map((observation, index) => observation.kind === "FLUID_INTAKE" && hasFluidItem ? null : (
                 <View
                   key={`${observation.kind}-${index}`}
                   style={{ flexDirection: "row", alignItems: "center", gap: 9 }}
