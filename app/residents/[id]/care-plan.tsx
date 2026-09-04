@@ -2,7 +2,7 @@ import { Alert, Pressable, Text, TextInput, View } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ClipboardList, Lightbulb, Plus, Save, Sparkles, Trash2 } from 'lucide-react-native';
+import { CalendarClock, CheckCircle2, ClipboardList, Lightbulb, Plus, Save, ShieldCheck, Sparkles, Trash2 } from 'lucide-react-native';
 import { ScreenContainer } from '@/src/components/ui/ScreenContainer';
 import { Card } from '@/src/components/ui/Card';
 import { EmptyState } from '@/src/components/ui/EmptyState';
@@ -67,6 +67,12 @@ export default function CarePlanScreen() {
     <>
       <Stack.Screen options={{ title: 'Care plan' }} />
       <ScreenContainer keyboardShouldPersistTaps="handled">
+        {!isManager && query.data ? (
+          <Card style={{ marginBottom: 14, borderLeftWidth: 3, borderLeftColor: colors.status.good }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 9 }}><CheckCircle2 size={20} color={colors.status.good} /><View style={{ flex: 1 }}><Text style={{ ...typography.bodyMedium, color: colors.text }}>Current approved care plan</Text><Text style={{ ...typography.caption, color: colors.secondary, marginTop: 2 }}>Version {query.data.version}{query.data.effectiveFrom ? ` · effective ${new Date(query.data.effectiveFrom).toLocaleDateString()}` : ''}</Text></View></View>
+            {query.data.reviewDueAt ? <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10 }}><CalendarClock size={15} color={colors.secondary} /><Text style={{ ...typography.caption, color: colors.secondary }}>Review due {new Date(query.data.reviewDueAt).toLocaleDateString()}</Text></View> : null}
+          </Card>
+        ) : null}
         {!isManager && !query.data ? (
           <EmptyState icon={ClipboardList} title="No care plan available" description="A manager has not published this resident’s care plan yet." />
         ) : null}
@@ -88,15 +94,15 @@ export default function CarePlanScreen() {
                 ))}
               </View>
             ) : (
-              <Text style={{ ...typography.label, color: colors.primary, fontWeight: '700' }}>{section.category.replaceAll('_', ' ')}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}><ShieldCheck size={19} color={colors.primary} /><Text style={{ ...typography.bodyMedium, color: colors.text }}>{section.category.replaceAll('_', ' ')}</Text></View>
             )}
-            {[['Assessed need', 'assessedNeed'], ['Desired outcome', 'desiredOutcome'], ['How staff should support', 'supportInstructions'], ['Risks', 'risks'], ['Preferences', 'preferences']].map(([label, field]) => (
+            {[['Assessed need', 'assessedNeed'], ['Desired outcome', 'desiredOutcome'], ['Preferences and routines', 'preferences'], ['How staff should support', 'supportInstructions'], ['Risks and safeguards', 'risks']].filter(([, field]) => isManager || Boolean(section[field as keyof CarePlanSectionDto])).map(([label, field]) => (
               <View key={field} style={{ marginTop: 10 }}>
                 <Text style={{ ...typography.label, color: colors.secondary }}>{label}</Text>
                 {isManager ? (
                   <TextInput multiline value={String(section[field as keyof CarePlanSectionDto] ?? '')} onChangeText={(value) => update(index, { [field]: value })} style={inputStyle} placeholder={label} placeholderTextColor={colors.secondary} />
                 ) : (
-                  <Text style={{ ...typography.body, color: colors.text, marginTop: 3 }}>{String(section[field as keyof CarePlanSectionDto] || 'Not recorded')}</Text>
+                  <View style={{ marginTop: 5, borderRadius: radius.sm, padding: field === 'supportInstructions' || field === 'risks' ? 10 : 0, backgroundColor: field === 'supportInstructions' ? `${colors.primary}10` : field === 'risks' ? colors.statusBg.watch : 'transparent' }}><Text style={{ ...typography.body, color: colors.text }}>{String(section[field as keyof CarePlanSectionDto])}</Text></View>
                 )}
               </View>
             ))}
