@@ -42,7 +42,7 @@ export default function HandoversScreen() {
   });
 
   const generateMutation = useMutation({
-    mutationFn: () => generateHandover(true),
+    mutationFn: () => generateHandover(false),
     onSuccess: async () => {
       await queryClient.invalidateQueries({
         queryKey: ["carehome", "handovers"],

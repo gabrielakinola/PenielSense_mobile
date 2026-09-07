@@ -12,7 +12,7 @@ export async function getActiveHandover(params?: QueryHandoverParams) {
   return data.data;
 }
 
-export async function generateHandover(force = true) {
+export async function generateHandover(force = false) {
   const { data } = await careHomeApiClient.post<
     ApiSuccessEnvelope<HandoverSnapshotDto>
   >("/carehome/handovers/generate", { force });
