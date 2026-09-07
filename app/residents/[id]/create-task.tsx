@@ -42,6 +42,7 @@ const repeatOptions = [
     label: "Morning, lunch, tea & bedtime",
     times: ["08:00", "12:00", "16:00", "20:00"],
   },
+  { key: "CUSTOM", label: "Custom times", times: [] },
 ] as const;
 
 export default function CreateTaskScreen() {
@@ -75,6 +76,7 @@ export default function CreateTaskScreen() {
   const [recurring, setRecurring] = useState(false);
   const [repeatKey, setRepeatKey] =
     useState<(typeof repeatOptions)[number]["key"]>("MORNING");
+  const [customTimes, setCustomTimes] = useState(["08:00"]);
   const mutation = useMutation({
     mutationFn: () =>
       createCareTask({
@@ -86,7 +88,9 @@ export default function CreateTaskScreen() {
         dueAt: new Date(Date.now() + dueHours * 3600000).toISOString(),
         recurrence: recurring ? "DAILY" : "ONCE",
         scheduleTimes: recurring
-          ? [...repeatOptions.find((item) => item.key === repeatKey)!.times]
+          ? repeatKey === "CUSTOM"
+            ? customTimes.filter(Boolean)
+            : [...repeatOptions.find((item) => item.key === repeatKey)!.times]
           : undefined,
       }),
     onSuccess: async () => {
@@ -112,6 +116,7 @@ export default function CreateTaskScreen() {
   const valid =
     title.trim().length > 0 &&
     instructions.trim().length > 0 &&
+    (!recurring || repeatKey !== "CUSTOM" || (customTimes.length > 0 && customTimes.every((time) => /^([01]\d|2[0-3]):[0-5]\d$/.test(time)))) &&
     !mutation.isPending;
   const chip = (label: string, selected: boolean, onPress: () => void) => (
     <Pressable
@@ -299,6 +304,34 @@ export default function CreateTaskScreen() {
                   </Text>
                 </Pressable>
               ))}
+              {repeatKey === "CUSTOM" ? (
+                <View style={{ gap: 8 }}>
+                  {customTimes.map((time, index) => (
+                    <View key={index} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                      <TextInput
+                        value={time}
+                        onChangeText={(value) => setCustomTimes((current) => current.map((item, itemIndex) => itemIndex === index ? value : item))}
+                        placeholder="HH:MM"
+                        placeholderTextColor={colors.secondary}
+                        keyboardType="numbers-and-punctuation"
+                        maxLength={5}
+                        style={{ ...input, flex: 1, marginTop: 0 }}
+                      />
+                      {customTimes.length > 1 ? (
+                        <Pressable onPress={() => setCustomTimes((current) => current.filter((_, itemIndex) => itemIndex !== index))} style={{ padding: 10 }}>
+                          <Text style={{ ...typography.caption, fontWeight: "600", color: "#E11D48" }}>Remove</Text>
+                        </Pressable>
+                      ) : null}
+                    </View>
+                  ))}
+                  {customTimes.length < 8 ? (
+                    <Pressable onPress={() => setCustomTimes((current) => [...current, "12:00"])}>
+                      <Text style={{ ...typography.bodyMedium, color: colors.primary }}>+ Add another time</Text>
+                    </Pressable>
+                  ) : null}
+                  <Text style={{ ...typography.caption, color: colors.secondary }}>Use 24-hour time, for example 07:30 or 21:00.</Text>
+                </View>
+              ) : null}
             </View>
           ) : null}
           <Pressable
