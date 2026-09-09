@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
+import { useQueryClient } from '@tanstack/react-query';
 import { careHomeApiClient, normalizeApiError } from '@/src/lib/api-client';
 import { useAuthStore } from '@/src/stores/auth-store';
 import {
@@ -13,8 +14,9 @@ import { typography } from '@/src/theme/typography';
 
 let flushing = false;
 async function flush(ownerId: string) {
-  if (flushing) return;
+  if (flushing) return 0;
   flushing = true;
+  let synced = 0;
   try {
     const pending = await pendingOfflineMutations(ownerId);
     for (const item of pending) {
@@ -26,6 +28,7 @@ async function flush(ownerId: string) {
           headers: { 'Idempotency-Key': item.id },
         });
         await removeOfflineMutation(item.id);
+        synced += 1;
       } catch (error) {
         await markOfflineMutationFailed(item.id, normalizeApiError(error));
         break;
@@ -34,11 +37,13 @@ async function flush(ownerId: string) {
   } finally {
     flushing = false;
   }
+  return synced;
 }
 
 export function OfflineSyncProvider({ children }: { children: React.ReactNode }) {
   const ownerId = useAuthStore((state) => state.user?.id);
   const authenticated = useAuthStore((state) => state.isAuthenticated);
+  const queryClient = useQueryClient();
   const colors = useThemeColors();
   const [online, setOnline] = useState(true);
   const [pendingCount, setPendingCount] = useState(0);
@@ -53,7 +58,13 @@ export function OfflineSyncProvider({ children }: { children: React.ReactNode })
       const connected = !!state.isConnected && state.isInternetReachable !== false;
       setOnline(connected);
       if (authenticated && ownerId && connected) {
-        void flush(ownerId).finally(refreshCount);
+        void flush(ownerId)
+          .then(async (synced) => {
+            if (synced > 0) {
+              await queryClient.invalidateQueries({ queryKey: ['carehome'] });
+            }
+          })
+          .finally(refreshCount);
       } else {
         void refreshCount();
       }
@@ -61,7 +72,7 @@ export function OfflineSyncProvider({ children }: { children: React.ReactNode })
     void refreshCount();
     const timer = setInterval(() => void refreshCount(), 3000);
     return () => { mounted = false; unsubscribe(); clearInterval(timer); };
-  }, [authenticated, ownerId]);
+  }, [authenticated, ownerId, queryClient]);
   const showStatus = authenticated && (!online || pendingCount > 0);
   return <View style={{ flex: 1 }}>
     {showStatus ? <View
