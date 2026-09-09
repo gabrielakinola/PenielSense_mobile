@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   Text,
   TextInput,
   View,
   Switch,
 } from "react-native";
+import NetInfo from "@react-native-community/netinfo";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Trash2 } from "lucide-react-native";
 import { PenielAiIcon } from "@/src/components/brand/PenielAiIcon";
@@ -69,6 +71,7 @@ export function CareEntryComposer({
     CareObservationDto[]
   >([]);
   const [handoverRequired, setHandoverRequired] = useState(initialHandover);
+  const [online, setOnline] = useState(true);
 
   const nextKey = () => {
     keySeq.current += 1;
@@ -102,6 +105,13 @@ export function CareEntryComposer({
     setHandoverRequired(initialHandover);
     onCancelEdit?.();
   };
+
+  useEffect(() => {
+    const unsubscribe = NetInfo.addEventListener((state) => {
+      setOnline(!!state.isConnected && state.isInternetReachable !== false);
+    });
+    return unsubscribe;
+  }, []);
 
   useEffect(() => {
     if (!editingEntry) return;
@@ -162,7 +172,13 @@ export function CareEntryComposer({
         extractedObservations,
         handoverRequired,
       }),
-    onSuccess: async () => {
+    onSuccess: async (result) => {
+      if (result.queued) {
+        Alert.alert(
+          "Saved on this phone",
+          "This care note will sync automatically when the connection returns.",
+        );
+      }
       resetComposer();
       await queryClient.invalidateQueries({
         queryKey: ["carehome", "care-entries", residentId],
@@ -171,6 +187,40 @@ export function CareEntryComposer({
     onError: (error) => {
       setFormError(normalizeApiError(error));
     },
+  });
+
+  const saveOfflineMutation = useMutation({
+    mutationFn: () => {
+      const wording = rawText.trim();
+      return createCareEntry(residentId, {
+        rawText: wording,
+        items: [
+          {
+            category: "GENERAL_WELLBEING",
+            summary: wording.slice(0, 500),
+          },
+        ],
+        extractedItems: [],
+        usedOpenAI: false,
+        model: null,
+        observations: [],
+        extractedObservations: [],
+        handoverRequired,
+      });
+    },
+    onSuccess: async (result) => {
+      Alert.alert(
+        result.queued ? "Saved on this phone" : "Care note saved",
+        result.queued
+          ? "The original wording is safe and will sync automatically when the connection returns. It is saved as a general care update because extraction needs a connection."
+          : "The care note has been saved.",
+      );
+      resetComposer();
+      await queryClient.invalidateQueries({
+        queryKey: ["carehome", "care-entries", residentId],
+      });
+    },
+    onError: (error) => setFormError(normalizeApiError(error)),
   });
 
   const updateMutation = useMutation({
@@ -235,13 +285,39 @@ export function CareEntryComposer({
             maxLength={4000}
             style={inputStyle}
           />
-          <PrimaryAction
-            label="Extract"
-            pending={extractMutation.isPending}
-            disabled={!canExtract}
-            onPress={() => extractMutation.mutate()}
-            icon={<PenielAiIcon size={20} variant="onColor" color="#FFFFFF" />}
-          />
+          {online ? (
+            <PrimaryAction
+              label="Extract"
+              pending={extractMutation.isPending}
+              disabled={!canExtract}
+              onPress={() => extractMutation.mutate()}
+              icon={<PenielAiIcon size={20} variant="onColor" color="#FFFFFF" />}
+            />
+          ) : (
+            <>
+              <View
+                style={{
+                  borderRadius: radius.md,
+                  backgroundColor: colors.statusBg.watch,
+                  padding: 12,
+                  gap: 3,
+                }}
+              >
+                <Text style={{ ...typography.bodyMedium, color: colors.status.watch }}>
+                  You’re offline
+                </Text>
+                <Text style={{ ...typography.caption, color: colors.secondary }}>
+                  Save the original note safely. It will upload automatically when the connection returns.
+                </Text>
+              </View>
+              <PrimaryAction
+                label="Save offline"
+                pending={saveOfflineMutation.isPending}
+                disabled={rawText.trim().length < 3 || saveOfflineMutation.isPending}
+                onPress={() => saveOfflineMutation.mutate()}
+              />
+            </>
+          )}
         </>
       ) : (
         <>
