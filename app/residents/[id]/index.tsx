@@ -131,7 +131,9 @@ export default function ResidentDetailScreen() {
       UserRound,
       "Profile & About Me",
       p?.aboutMe?.whatMatters || "Preferences, communication and what matters",
+      `/residents/${id}/record`,
     ],
+    [ClipboardList, "Assessments", "Needs, risks and current review dates", `/residents/${id}/assessments`],
     [
       BookHeart,
       "Care plan",
@@ -171,11 +173,12 @@ export default function ResidentDetailScreen() {
       "Sensor and care-note evidence",
       `/residents/${id}/report`,
     ],
-    [UsersRound, "Contacts & GP", p?.gpName || "Key contacts and GP details"],
+    [UsersRound, "Contacts & GP", p?.gpName || "Key contacts and GP details", `/residents/${id}/record`],
     [
       History,
       "Consent, capacity & DoLS",
       p?.capacitySummary || "Current decisions and authorisations",
+      `/residents/${id}/record`,
     ],
   ] as const;
   return (
