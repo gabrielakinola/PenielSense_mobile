@@ -44,6 +44,7 @@ export default function HandoversScreen() {
   const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
   const [mode, setMode] = useState<"home" | "mine">("home");
+  const [selectedResidentId, setSelectedResidentId] = useState<string | null>(null);
 
   const handoverQuery = useQuery({
     queryKey: ["carehome", "handovers", "active"],
@@ -192,11 +193,16 @@ export default function HandoversScreen() {
     const rank = { attention: 0, watch: 1, normal: 2 } as const;
     return rank[a.riskLevel] - rank[b.riskLevel];
   });
+  const foundIndex = residents.findIndex(
+    (resident) => resident.residentId === selectedResidentId,
+  );
+  const selectedIndex = foundIndex < 0 ? 0 : foundIndex;
+  const selectedResident = residents[selectedIndex];
 
   return shell(
     <ScreenContainer scroll={false} padded={false}>
       <FlatList
-        data={residents}
+        data={selectedResident ? [selectedResident] : []}
         keyExtractor={(item) => item.residentId}
         contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
         refreshControl={
@@ -213,7 +219,11 @@ export default function HandoversScreen() {
             <PageIntro
               eyebrow={handover.dateKey}
               title={SHIFT_COPY[handover.shiftWindow]}
-              subtitle={handover.careHomeSummary.narrative}
+              subtitle={`${handover.careHomeSummary.residentsMonitored} residents · ${handover.careHomeSummary.residentsRequiringAttention} need attention · ${Math.max(
+                0,
+                handover.careHomeSummary.residentsMonitored -
+                  handover.careHomeSummary.residentsRequiringAttention,
+              )} settled`}
               footer={
                 <View
                   style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}
@@ -349,6 +359,58 @@ export default function HandoversScreen() {
             </Card>
 
             <SectionHeader title="Priority residents" />
+            <FlatList
+              horizontal
+              data={residents}
+              keyExtractor={(resident) => resident.residentId}
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ gap: 8, paddingBottom: 12 }}
+              renderItem={({ item }) => {
+                const selected = item.residentId === selectedResident?.residentId;
+                const tone =
+                  item.riskLevel === "attention"
+                    ? colors.status.critical
+                    : item.riskLevel === "watch"
+                      ? colors.status.watch
+                      : colors.status.good;
+                return (
+                  <Pressable
+                    onPress={() => setSelectedResidentId(item.residentId)}
+                    accessibilityRole="tab"
+                    accessibilityState={{ selected }}
+                    style={{
+                      paddingHorizontal: 14,
+                      paddingVertical: 10,
+                      borderRadius: radius.full,
+                      borderWidth: 1,
+                      borderColor: selected ? colors.primary : colors.border,
+                      backgroundColor: selected ? colors.primary : colors.surface,
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 7,
+                    }}
+                  >
+                    <View
+                      style={{
+                        width: 7,
+                        height: 7,
+                        borderRadius: 4,
+                        backgroundColor: selected ? "#FFFFFF" : tone,
+                      }}
+                    />
+                    <Text
+                      style={{
+                        ...typography.label,
+                        fontWeight: "700",
+                        color: selected ? "#FFFFFF" : colors.text,
+                      }}
+                    >
+                      {item.residentName}
+                    </Text>
+                  </Pressable>
+                );
+              }}
+            />
           </View>
         }
         ListEmptyComponent={
@@ -362,6 +424,24 @@ export default function HandoversScreen() {
           <HandoverResidentRow
             resident={item}
             index={index}
+            position={selectedIndex + 1}
+            total={residents.length}
+            onPrevious={
+              selectedIndex > 0
+                ? () =>
+                    setSelectedResidentId(
+                      residents[selectedIndex - 1].residentId,
+                    )
+                : undefined
+            }
+            onNext={
+              selectedIndex < residents.length - 1
+                ? () =>
+                    setSelectedResidentId(
+                      residents[selectedIndex + 1].residentId,
+                    )
+                : undefined
+            }
             onPress={() => router.push(`/residents/${item.residentId}`)}
           />
         )}
