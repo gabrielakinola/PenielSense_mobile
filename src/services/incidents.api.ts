@@ -16,6 +16,7 @@ export interface CreateIncidentPayload {
   managerNotified: boolean;
   safeguardingConcern: boolean;
   safeguardingRationale?: string;
+  bodyMap?: Array<{ view: 'FRONT' | 'BACK'; x: number; y: number; type: string; description?: string }>;
 }
 
 export function createIncident(payload: CreateIncidentPayload) {
