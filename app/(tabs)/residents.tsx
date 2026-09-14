@@ -1,29 +1,30 @@
-import { useCallback, useMemo, useState } from 'react';
-import { FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
-import { useQuery } from '@tanstack/react-query';
-import { useRouter } from 'expo-router';
-import { SlidersHorizontal, Users } from 'lucide-react-native';
-import { ScreenContainer } from '@/src/components/ui/ScreenContainer';
-import { SearchInput } from '@/src/components/ui/SearchInput';
-import { EmptyState } from '@/src/components/ui/EmptyState';
-import { SkeletonRow } from '@/src/components/ui/Skeleton';
-import { ScreenHeader } from '@/src/components/ui/ScreenHeader';
-import { PageIntro } from '@/src/components/ui/PageIntro';
-import { ResidentCard } from '@/src/components/residents/ResidentCard';
+import { useCallback, useMemo, useState } from "react";
+import { FlatList, Pressable, RefreshControl, Text, View } from "react-native";
+import { useQuery } from "@tanstack/react-query";
+import { useRouter } from "expo-router";
+import { SlidersHorizontal, Users } from "lucide-react-native";
+import { ScreenContainer } from "@/src/components/ui/ScreenContainer";
+import { SearchInput } from "@/src/components/ui/SearchInput";
+import { EmptyState } from "@/src/components/ui/EmptyState";
+import { SkeletonRow } from "@/src/components/ui/Skeleton";
+import { ScreenHeader } from "@/src/components/ui/ScreenHeader";
+import { PageIntro } from "@/src/components/ui/PageIntro";
+import { ResidentCard } from "@/src/components/residents/ResidentCard";
 import {
   FilterSheet,
   RESIDENT_INTELLIGENCE_OPTIONS,
-} from '@/src/components/filters/FilterSheet';
-import { getCareHomeResidents } from '@/src/services/residents.api';
-import { getResidentIntelligenceBadges } from '@/src/services/intelligence.api';
-import { useDebouncedValue } from '@/src/hooks/useDebouncedValue';
-import { useUiStore } from '@/src/stores/ui-store';
-import { useThemeColors } from '@/src/hooks/use-theme-colors';
-import { useResolvedTheme } from '@/src/theme/theme-provider';
-import { typography } from '@/src/theme/typography';
-import { radius } from '@/src/theme/radius';
-import { MIN_TOUCH_TARGET } from '@/src/constants/app';
-import type { ResidentIntelligenceFilter } from '@/src/types/carehome.types';
+} from "@/src/components/filters/FilterSheet";
+import { getCareHomeResidents } from "@/src/services/residents.api";
+import { getResidentIntelligenceBadges } from "@/src/services/intelligence.api";
+import { useDebouncedValue } from "@/src/hooks/useDebouncedValue";
+import { useUiStore } from "@/src/stores/ui-store";
+import { useThemeColors } from "@/src/hooks/use-theme-colors";
+import { useResolvedTheme } from "@/src/theme/theme-provider";
+import { typography } from "@/src/theme/typography";
+import { radius } from "@/src/theme/radius";
+import { MIN_TOUCH_TARGET } from "@/src/constants/app";
+import type { ResidentIntelligenceFilter } from "@/src/types/carehome.types";
+import { useAuthStore } from "@/src/stores/auth-store";
 
 const POLL_MS = 60_000;
 
@@ -31,44 +32,50 @@ export default function ResidentsScreen() {
   const colors = useThemeColors();
   const theme = useResolvedTheme();
   const router = useRouter();
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState("");
   const debouncedSearch = useDebouncedValue(search, 300);
   const [refreshing, setRefreshing] = useState(false);
+  const user = useAuthStore((state) => state.user);
 
   const intelligenceFilter = useUiStore((s) => s.residentIntelligenceFilter);
-  const setIntelligenceFilter = useUiStore((s) => s.setResidentIntelligenceFilter);
+  const setIntelligenceFilter = useUiStore(
+    (s) => s.setResidentIntelligenceFilter,
+  );
   const setFilterSheetOpen = useUiStore((s) => s.setFilterSheetOpen);
   const resetResidentFilters = useUiStore((s) => s.resetResidentFilters);
 
   const residentsQuery = useQuery({
     queryKey: [
-      'carehome',
-      'residents',
+      "carehome",
+      "residents",
       debouncedSearch,
       intelligenceFilter,
-      'intelligence',
+      "intelligence",
     ],
     queryFn: () =>
       getCareHomeResidents({
         search: debouncedSearch || undefined,
         intelligence:
-          intelligenceFilter === 'all'
+          intelligenceFilter === "all"
             ? undefined
             : (intelligenceFilter as ResidentIntelligenceFilter),
-        sort: 'intelligence',
+        sort: "intelligence",
       }),
     refetchInterval: POLL_MS,
   });
 
   const badgesQuery = useQuery({
-    queryKey: ['carehome', 'intelligence-badges'],
+    queryKey: ["carehome", "intelligence-badges"],
     queryFn: getResidentIntelligenceBadges,
     refetchInterval: POLL_MS,
   });
 
   const badgeById = useMemo(() => {
     const map = new Map(
-      (badgesQuery.data?.badges ?? []).map((badge) => [badge.residentId, badge]),
+      (badgesQuery.data?.badges ?? []).map((badge) => [
+        badge.residentId,
+        badge,
+      ]),
     );
     return map;
   }, [badgesQuery.data]);
@@ -81,18 +88,18 @@ export default function ResidentsScreen() {
       if (!badge.isMonitored) continue;
       if (badge.attentionCount > 0) attention += 1;
       else if (badge.watchCount > 0) watch += 1;
-      else if (badge.currentRoutineStatus === 'delayed') delayed += 1;
+      else if (badge.currentRoutineStatus === "delayed") delayed += 1;
     }
     return { attention, watch, delayed };
   }, [badgesQuery.data]);
 
   const residents = residentsQuery.data ?? [];
   const isFetching = residentsQuery.isFetching;
-  const hasActiveFilters = !!debouncedSearch || intelligenceFilter !== 'all';
+  const hasActiveFilters = !!debouncedSearch || intelligenceFilter !== "all";
 
   const filterLabel =
     RESIDENT_INTELLIGENCE_OPTIONS.find((o) => o.value === intelligenceFilter)
-      ?.label ?? 'Everyone';
+      ?.label ?? "Everyone";
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -103,32 +110,32 @@ export default function ResidentsScreen() {
   const listHeader = (
     <View>
       <PageIntro
-        eyebrow="Floor triage"
-        title="Residents"
+        eyebrow="Your shift"
+        title={`Hi${user?.firstName ? `, ${user.firstName}` : ""}`}
         subtitle="Filter by who needs a check, needs an eye kept on them, or is off routine."
         footer={
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
             {[
               {
-                label: 'Needs a check',
+                label: "Needs a check",
                 value: triageCounts.attention,
                 color: colors.status.critical,
                 bg: colors.statusBg.critical,
               },
               {
-                label: 'Keep an eye on',
+                label: "Keep an eye on",
                 value: triageCounts.watch,
                 color: colors.status.watch,
                 bg: colors.statusBg.watch,
               },
               {
-                label: 'Off routine',
+                label: "Off routine",
                 value: triageCounts.delayed,
                 color: colors.primary,
                 bg:
-                  theme === 'dark'
-                    ? 'rgba(135,165,248,0.14)'
-                    : 'rgba(37,99,235,0.08)',
+                  theme === "dark"
+                    ? "rgba(135,165,248,0.14)"
+                    : "rgba(37,99,235,0.08)",
               },
             ].map((pill) => (
               <View
@@ -140,7 +147,13 @@ export default function ResidentsScreen() {
                   paddingVertical: 6,
                 }}
               >
-                <Text style={{ ...typography.label, color: pill.color, fontWeight: '700' }}>
+                <Text
+                  style={{
+                    ...typography.label,
+                    color: pill.color,
+                    fontWeight: "700",
+                  }}
+                >
                   {pill.value} {pill.label}
                 </Text>
               </View>
@@ -157,35 +170,41 @@ export default function ResidentsScreen() {
       />
       <View
         style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
           marginTop: 12,
           marginBottom: 8,
         }}
       >
         <Text style={{ ...typography.caption, color: colors.secondary }}>
-          {residents.length} resident{residents.length !== 1 ? 's' : ''}
-          {intelligenceFilter !== 'all' ? ` · ${filterLabel}` : ''}
+          {residents.length} resident{residents.length !== 1 ? "s" : ""}
+          {intelligenceFilter !== "all" ? ` · ${filterLabel}` : ""}
         </Text>
         <Pressable
           onPress={() => setFilterSheetOpen(true)}
           accessibilityRole="button"
           accessibilityLabel="Open filters"
           style={{
-            flexDirection: 'row',
-            alignItems: 'center',
+            flexDirection: "row",
+            alignItems: "center",
             gap: 6,
             minHeight: MIN_TOUCH_TARGET,
             paddingHorizontal: 12,
             borderRadius: radius.full,
             backgroundColor:
-              theme === 'dark' ? 'rgba(135,165,248,0.12)' : 'rgba(37,99,235,0.08)',
+              theme === "dark"
+                ? "rgba(135,165,248,0.12)"
+                : "rgba(37,99,235,0.08)",
           }}
         >
           <SlidersHorizontal size={16} color={colors.primary} />
           <Text
-            style={{ ...typography.caption, color: colors.primary, fontWeight: '600' }}
+            style={{
+              ...typography.caption,
+              color: colors.primary,
+              fontWeight: "600",
+            }}
           >
             Filter
           </Text>
@@ -224,19 +243,19 @@ export default function ResidentsScreen() {
                   icon={Users}
                   title={
                     hasActiveFilters
-                      ? 'No results match your filters'
-                      : 'No residents yet'
+                      ? "No results match your filters"
+                      : "No residents yet"
                   }
                   description={
                     hasActiveFilters
-                      ? 'Try adjusting your search or filter criteria.'
-                      : 'Residents will appear here once added to the care home.'
+                      ? "Try adjusting your search or filter criteria."
+                      : "Residents will appear here once added to the care home."
                   }
-                  actionLabel={hasActiveFilters ? 'Clear filters' : undefined}
+                  actionLabel={hasActiveFilters ? "Clear filters" : undefined}
                   onAction={
                     hasActiveFilters
                       ? () => {
-                          setSearch('');
+                          setSearch("");
                           resetResidentFilters();
                         }
                       : undefined

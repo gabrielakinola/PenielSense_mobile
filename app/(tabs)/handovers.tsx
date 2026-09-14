@@ -1,5 +1,12 @@
 import { useCallback, useState, type ReactNode } from "react";
-import { Alert, FlatList, RefreshControl, Text, View } from "react-native";
+import {
+  Alert,
+  FlatList,
+  Pressable,
+  RefreshControl,
+  Text,
+  View,
+} from "react-native";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { CheckCircle2, ClipboardList } from "lucide-react-native";
@@ -22,6 +29,7 @@ import { useThemeColors } from "@/src/hooks/use-theme-colors";
 import { useResolvedTheme } from "@/src/theme/theme-provider";
 import { typography } from "@/src/theme/typography";
 import { radius } from "@/src/theme/radius";
+import { MyHandoverPanel } from "@/src/components/handovers/MyHandoverPanel";
 
 const SHIFT_COPY = {
   morning: "Morning handover",
@@ -35,6 +43,7 @@ export default function HandoversScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
+  const [mode, setMode] = useState<"home" | "mine">("home");
 
   const handoverQuery = useQuery({
     queryKey: ["carehome", "handovers", "active"],
@@ -75,9 +84,68 @@ export default function HandoversScreen() {
     </View>
   );
 
+  const modeSelector = (
+    <View
+      style={{
+        flexDirection: "row",
+        padding: 4,
+        borderRadius: radius.full,
+        backgroundColor: colors.surfaceElevated,
+        borderWidth: 1,
+        borderColor: colors.border,
+        marginBottom: 14,
+      }}
+    >
+      {(
+        [
+          ["home", "Care-home handover"],
+          ["mine", "My handover"],
+        ] as const
+      ).map(([value, label]) => {
+        const selected = mode === value;
+        return (
+          <Pressable
+            key={value}
+            onPress={() => setMode(value)}
+            accessibilityRole="tab"
+            accessibilityState={{ selected }}
+            style={{
+              flex: 1,
+              paddingVertical: 10,
+              paddingHorizontal: 8,
+              borderRadius: radius.full,
+              backgroundColor: selected ? colors.primary : "transparent",
+            }}
+          >
+            <Text
+              style={{
+                ...typography.label,
+                textAlign: "center",
+                fontWeight: "700",
+                color: selected ? "#FFFFFF" : colors.secondary,
+              }}
+            >
+              {label}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+
+  if (mode === "mine") {
+    return shell(
+      <ScreenContainer>
+        {modeSelector}
+        <MyHandoverPanel />
+      </ScreenContainer>,
+    );
+  }
+
   if (handoverQuery.isLoading) {
     return shell(
       <ScreenContainer>
+        {modeSelector}
         <SkeletonCard lines={4} />
       </ScreenContainer>,
     );
@@ -86,6 +154,7 @@ export default function HandoversScreen() {
   if (handoverQuery.isError) {
     return shell(
       <ScreenContainer>
+        {modeSelector}
         <EmptyState
           icon={ClipboardList}
           title="Couldn’t load handover"
@@ -100,6 +169,7 @@ export default function HandoversScreen() {
   if (!handover) {
     return shell(
       <ScreenContainer>
+        {modeSelector}
         <PageIntro
           eyebrow="Shift change"
           title="No active handover yet"
@@ -139,6 +209,7 @@ export default function HandoversScreen() {
         }
         ListHeaderComponent={
           <View style={{ marginBottom: 8 }}>
+            {modeSelector}
             <PageIntro
               eyebrow={handover.dateKey}
               title={SHIFT_COPY[handover.shiftWindow]}

@@ -308,7 +308,43 @@ export interface HandoverResidentCard {
     summary: string;
     recordedBy: string;
   }>;
+  careCompleted?: Array<{
+    id: string;
+    at: string;
+    summary: string;
+    recordedBy: string;
+  }>;
   connectedDevices: string[];
+}
+
+export interface PersonalHandoverItem {
+  id: string;
+  type: "CARE_NOTE" | "TASK_OUTCOME";
+  at: string;
+  category: string;
+  summary: string;
+  outcome: string;
+  handoverRequired: boolean;
+}
+
+export interface PersonalHandoverDto {
+  id: string | null;
+  userId: string;
+  staffName: string;
+  shiftWindow: HandoverShiftWindow;
+  dateKey: string;
+  windowStart: string;
+  windowEnd: string;
+  residents: Array<{
+    residentId: string;
+    residentName: string;
+    room: string;
+    items: PersonalHandoverItem[];
+  }>;
+  additionalNote: string;
+  status: "DRAFT" | "SUBMITTED";
+  submittedAt: string | null;
+  updatedAt: string | null;
 }
 
 export interface HandoverSnapshotDto {

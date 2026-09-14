@@ -1,24 +1,30 @@
-import { Pressable, Text, View } from 'react-native';
-import Animated from 'react-native-reanimated';
-import { ChevronRight, MessageSquareText } from 'lucide-react-native';
-import { Card } from '@/src/components/ui/Card';
-import { IntelligenceStatusChip } from '@/src/components/residents/IntelligenceStatusChip';
-import { listItemEnter } from '@/src/animations/presets';
-import { useThemeColors } from '@/src/hooks/use-theme-colors';
-import { typography } from '@/src/theme/typography';
-import type { HandoverResidentCard } from '@/src/types/carehome.types';
-import type { IntelligenceStatusTone } from '@/src/utils/resident-status';
+import { Pressable, Text, View } from "react-native";
+import Animated from "react-native-reanimated";
+import {
+  CheckCircle2,
+  ChevronRight,
+  MessageSquareText,
+} from "lucide-react-native";
+import { Card } from "@/src/components/ui/Card";
+import { IntelligenceStatusChip } from "@/src/components/residents/IntelligenceStatusChip";
+import { listItemEnter } from "@/src/animations/presets";
+import { useThemeColors } from "@/src/hooks/use-theme-colors";
+import { typography } from "@/src/theme/typography";
+import type { HandoverResidentCard } from "@/src/types/carehome.types";
+import type { IntelligenceStatusTone } from "@/src/utils/resident-status";
 
-function riskTone(
-  risk: HandoverResidentCard['riskLevel'],
-): { label: string; tone: IntelligenceStatusTone; accentKey: 'critical' | 'watch' | 'good' } {
-  if (risk === 'attention') {
-    return { label: 'Needs a check', tone: 'attention', accentKey: 'critical' };
+function riskTone(risk: HandoverResidentCard["riskLevel"]): {
+  label: string;
+  tone: IntelligenceStatusTone;
+  accentKey: "critical" | "watch" | "good";
+} {
+  if (risk === "attention") {
+    return { label: "Needs a check", tone: "attention", accentKey: "critical" };
   }
-  if (risk === 'watch') {
-    return { label: 'Keep an eye on', tone: 'watch', accentKey: 'watch' };
+  if (risk === "watch") {
+    return { label: "Keep an eye on", tone: "watch", accentKey: "watch" };
   }
-  return { label: 'Stable', tone: 'stable', accentKey: 'good' };
+  return { label: "Stable", tone: "stable", accentKey: "good" };
 }
 
 interface HandoverResidentRowProps {
@@ -39,19 +45,21 @@ export function HandoverResidentRow({
   return (
     <Animated.View entering={listItemEnter(index)} style={{ marginBottom: 12 }}>
       <Pressable onPress={onPress} accessibilityRole="button">
-        <Card style={{ padding: 0, overflow: 'hidden' }}>
-          <View style={{ flexDirection: 'row' }}>
+        <Card style={{ padding: 0, overflow: "hidden" }}>
+          <View style={{ flexDirection: "row" }}>
             <View style={{ width: 4, backgroundColor: accent }} />
             <View style={{ flex: 1, padding: 14 }}>
               <View
                 style={{
-                  flexDirection: 'row',
-                  justifyContent: 'space-between',
+                  flexDirection: "row",
+                  justifyContent: "space-between",
                   gap: 8,
                 }}
               >
                 <View style={{ flex: 1 }}>
-                  <Text style={{ ...typography.bodyMedium, color: colors.text }}>
+                  <Text
+                    style={{ ...typography.bodyMedium, color: colors.text }}
+                  >
                     {resident.residentName}
                   </Text>
                   <Text
@@ -63,11 +71,14 @@ export function HandoverResidentRow({
                   >
                     {resident.room}
                     {resident.connectedDevices.length
-                      ? ` · ${resident.connectedDevices.join(', ')}`
-                      : ''}
+                      ? ` · ${resident.connectedDevices.join(", ")}`
+                      : ""}
                   </Text>
                 </View>
-                <IntelligenceStatusChip label={status.label} tone={status.tone} />
+                <IntelligenceStatusChip
+                  label={status.label}
+                  tone={status.tone}
+                />
               </View>
               <Text
                 style={{
@@ -88,23 +99,104 @@ export function HandoverResidentRow({
                   }}
                 >
                   {resident.reviewFlags.length} open flag
-                  {resident.reviewFlags.length === 1 ? '' : 's'}
+                  {resident.reviewFlags.length === 1 ? "" : "s"}
                 </Text>
               ) : null}
+              {(resident.careCompleted?.length ?? 0) > 0 ? (
+                <View
+                  style={{
+                    marginTop: 10,
+                    padding: 10,
+                    borderRadius: 10,
+                    backgroundColor: colors.statusBg.good,
+                  }}
+                >
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 7,
+                    }}
+                  >
+                    <CheckCircle2 size={17} color={colors.status.good} />
+                    <Text
+                      style={{
+                        ...typography.label,
+                        color: colors.status.good,
+                        fontWeight: "700",
+                      }}
+                    >
+                      CARE COMPLETED THIS SHIFT
+                    </Text>
+                  </View>
+                  {resident.careCompleted?.map((entry) => (
+                    <View key={entry.id} style={{ marginTop: 7 }}>
+                      <Text
+                        style={{ ...typography.caption, color: colors.text }}
+                      >
+                        {entry.summary}
+                      </Text>
+                      <Text
+                        style={{
+                          ...typography.label,
+                          color: colors.secondary,
+                          marginTop: 2,
+                        }}
+                      >
+                        {entry.recordedBy}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              ) : null}
               {(resident.handoverNotes ?? []).map((note) => (
-                <View key={note.id} style={{ marginTop: 10, padding: 10, borderRadius: 10, backgroundColor: colors.statusBg.watch, flexDirection: 'row', gap: 8 }}>
+                <View
+                  key={note.id}
+                  style={{
+                    marginTop: 10,
+                    padding: 10,
+                    borderRadius: 10,
+                    backgroundColor: colors.statusBg.watch,
+                    flexDirection: "row",
+                    gap: 8,
+                  }}
+                >
                   <MessageSquareText size={17} color={colors.status.watch} />
                   <View style={{ flex: 1 }}>
-                    <Text style={{ ...typography.label, color: colors.status.watch, fontWeight: '700' }}>STAFF HANDOVER NOTE</Text>
-                    <Text style={{ ...typography.caption, color: colors.text, marginTop: 3 }}>{note.summary}</Text>
-                    <Text style={{ ...typography.label, color: colors.secondary, marginTop: 4 }}>{note.recordedBy}</Text>
+                    <Text
+                      style={{
+                        ...typography.label,
+                        color: colors.status.watch,
+                        fontWeight: "700",
+                      }}
+                    >
+                      STAFF HANDOVER NOTE
+                    </Text>
+                    <Text
+                      style={{
+                        ...typography.caption,
+                        color: colors.text,
+                        marginTop: 3,
+                      }}
+                    >
+                      {note.summary}
+                    </Text>
+                    <Text
+                      style={{
+                        ...typography.label,
+                        color: colors.secondary,
+                        marginTop: 4,
+                      }}
+                    >
+                      {note.recordedBy}
+                    </Text>
                   </View>
                 </View>
               ))}
               <View
                 style={{
-                  flexDirection: 'row',
-                  justifyContent: 'flex-end',
+                  flexDirection: "row",
+                  justifyContent: "flex-end",
                   marginTop: 8,
                 }}
               >
