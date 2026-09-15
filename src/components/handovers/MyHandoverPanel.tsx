@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { Alert, Text, TextInput, View } from "react-native";
+import { Alert, Modal, Pressable, Share, Text, TextInput, View } from "react-native";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, ClipboardCheck } from "lucide-react-native";
+import { CheckCircle2, ClipboardCheck, QrCode, Share2, X } from "lucide-react-native";
+import QRCode from "react-native-qrcode-svg";
 import { Card } from "@/src/components/ui/Card";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { SkeletonCard } from "@/src/components/ui/Skeleton";
@@ -30,6 +31,7 @@ export function MyHandoverPanel() {
   const queryClient = useQueryClient();
   const [note, setNote] = useState("");
   const [hasEdited, setHasEdited] = useState(false);
+  const [showQr, setShowQr] = useState(false);
   const query = useQuery({ queryKey: key, queryFn: getMyHandover });
   const handover = query.data;
 
@@ -79,6 +81,16 @@ export function MyHandoverPanel() {
     0,
   );
   const submitted = handover.status === "SUBMITTED";
+  const shareText = [
+    `${handover.staffName} — ${handover.shiftWindow} handover (${handover.dateKey})`,
+    ...handover.residents.flatMap((resident) => [
+      "",
+      `${resident.residentName}${resident.room ? ` · Room ${resident.room}` : ""}`,
+      ...resident.items.map((item) => `${when(item.at)} — ${item.summary}${item.handoverRequired ? " [For next shift]" : ""}`),
+    ]),
+    ...(handover.additionalNote ? ["", `For the next shift: ${handover.additionalNote}`] : []),
+  ].join("\n");
+  const whatsAppQr = `https://wa.me/?text=${encodeURIComponent(shareText.slice(0, 1800))}`;
 
   return (
     <View style={{ gap: 12 }}>
@@ -227,8 +239,17 @@ export function MyHandoverPanel() {
               />
             </View>
           </>
-        ) : null}
+        ) : (
+          <View style={{ marginTop: 14, gap: 9 }}>
+            <Text style={{ ...typography.caption, color: colors.secondary }}>Send this approved copy to the dedicated WhatsApp phone.</Text>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+              <Pressable onPress={()=>void Share.share({message:shareText})} style={{ flexDirection:"row",alignItems:"center",gap:6,padding:11,borderRadius:radius.md,backgroundColor:colors.surfaceElevated }}><Share2 size={17} color={colors.primary}/><Text style={{...typography.label,color:colors.primary}}>Share</Text></Pressable>
+              <Pressable onPress={()=>setShowQr(true)} style={{ flexDirection:"row",alignItems:"center",gap:6,padding:11,borderRadius:radius.md,backgroundColor:colors.primary }}><QrCode size={17} color="#fff"/><Text style={{...typography.label,color:'#fff'}}>Scan to WhatsApp</Text></Pressable>
+            </View>
+          </View>
+        )}
       </Card>
+      <Modal visible={showQr} transparent animationType="fade" onRequestClose={()=>setShowQr(false)}><View style={{flex:1,backgroundColor:'rgba(0,0,0,.65)',alignItems:'center',justifyContent:'center',padding:24}}><View style={{width:'100%',maxWidth:360,backgroundColor:'#fff',borderRadius:20,padding:22,alignItems:'center'}}><Pressable onPress={()=>setShowQr(false)} style={{alignSelf:'flex-end'}}><X size={22} color="#334155"/></Pressable><Text style={{...typography.heading,color:'#0f172a',textAlign:'center'}}>Scan with the WhatsApp phone</Text><Text style={{...typography.caption,color:'#64748b',textAlign:'center',marginTop:6,marginBottom:18}}>This opens WhatsApp with the handover ready to send. Check the destination group before sending.</Text><QRCode value={whatsAppQr} size={250}/>{shareText.length>1800?<Text style={{...typography.caption,color:'#b45309',textAlign:'center',marginTop:14}}>This handover is long. The QR contains a shortened copy; use Copy or Share for the complete version.</Text>:null}</View></View></Modal>
     </View>
   );
 }
