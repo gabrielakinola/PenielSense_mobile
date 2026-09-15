@@ -307,12 +307,14 @@ export interface HandoverResidentCard {
     at: string;
     summary: string;
     recordedBy: string;
+    categories?: string[];
   }>;
   careCompleted?: Array<{
     id: string;
     at: string;
     summary: string;
     recordedBy: string;
+    categories?: string[];
   }>;
   connectedDevices: string[];
 }
