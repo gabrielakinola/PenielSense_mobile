@@ -134,6 +134,8 @@ export default function ResidentDetailScreen() {
       `/residents/${id}/record`,
     ],
     [ClipboardList, "Assessments", "Needs, risks and current review dates", `/residents/${id}/assessments`],
+    [Pill, "Medication and MAR", "Authorised medicines and administration record", `/residents/${id}/medication`],
+    [FileText, "Documents & visits", "Appointments, professional contact and resident journey", `/residents/${id}/records`],
     [
       BookHeart,
       "Care plan",
