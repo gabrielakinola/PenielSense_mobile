@@ -70,13 +70,13 @@ export function MyHandoverPanel() {
       if (localDraftKey) void AsyncStorage.removeItem(localDraftKey);
       Alert.alert(
         "Handover submitted",
-        "Your shift record is saved for the next team.",
+        "Everything you recorded today is saved for the next team.",
       );
     },
     onError: (error) =>
       Alert.alert(
         "Not submitted yet",
-        `${normalizeApiError(error)} Your note remains saved on this device. Connect and submit again before ending the shift.`,
+        `${normalizeApiError(error)} Your note remains saved on this device. Connect and submit again before leaving.`,
       ),
   });
 
@@ -106,7 +106,7 @@ export function MyHandoverPanel() {
   );
   const submitted = handover.status === "SUBMITTED";
   const shareText = [
-    `${handover.staffName} — ${handover.shiftWindow} handover (${handover.dateKey})`,
+    `${handover.staffName} — daily handover (${handover.dateKey})`,
     ...handover.residents.flatMap((resident) => [
       "",
       `${resident.residentName}${resident.room ? ` · Room ${resident.room}` : ""}`,
@@ -138,8 +138,7 @@ export function MyHandoverPanel() {
                 marginTop: 2,
               }}
             >
-              {itemCount} recorded outcome{itemCount === 1 ? "" : "s"} this
-              shift
+              {itemCount} recorded outcome{itemCount === 1 ? "" : "s"} today
             </Text>
           </View>
         </View>
@@ -210,7 +209,7 @@ export function MyHandoverPanel() {
         <EmptyState
           icon={ClipboardCheck}
           title="No work recorded on this account"
-          description="Care notes and task outcomes you record during this shift will appear here automatically."
+          description="Care notes and task outcomes you record throughout today will appear here automatically."
         />
       )}
 

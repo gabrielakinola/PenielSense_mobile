@@ -360,7 +360,7 @@ export default function ChartsScreen() {
         <EmptyState
           icon={Activity}
           title="No chart records yet"
-          description="Weight, bowel and repositioning records for this resident appear here."
+          description="Fluid, weight, bowel and repositioning records for this resident appear here."
         />
       ) : (
         recent.map((row) => (
@@ -370,6 +370,8 @@ export default function ChartsScreen() {
                 <Text style={{ ...typography.bodyMedium, color: colors.text }}>
                   {row.observation.kind === 'WEIGHT'
                     ? 'Weight'
+                    : row.observation.kind === 'FLUID_INTAKE'
+                      ? 'Fluid intake'
                     : row.observation.kind === 'BOWEL_MOVEMENT'
                       ? 'Bowel movement'
                       : 'Repositioning'}

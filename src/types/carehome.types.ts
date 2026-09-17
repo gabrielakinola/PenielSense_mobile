@@ -355,6 +355,7 @@ export interface PersonalHandoverDto {
   userId: string;
   staffName: string;
   shiftWindow: HandoverShiftWindow;
+  coverage: "DAY";
   dateKey: string;
   windowStart: string;
   windowEnd: string;
@@ -378,6 +379,7 @@ export interface HandoverSnapshotDto {
   windowStart: string;
   windowEnd: string;
   generatedAt: string;
+  generatedBy: { userId: string; name: string; role: string } | null;
   careHomeSummary: {
     residentsMonitored: number;
     residentsRequiringAttention: number;
