@@ -19,6 +19,7 @@ import {
   HeartPulse,
   History,
   Info,
+  LineChart,
   MessageSquarePlus,
   Pill,
   ShieldAlert,
@@ -135,6 +136,7 @@ export default function ResidentDetailScreen() {
     ],
     [ClipboardList, "Assessments", "Needs, risks and current review dates", `/residents/${id}/assessments`],
     [Pill, "Medication and MAR", "Authorised medicines and administration record", `/residents/${id}/medication`],
+    [LineChart, "Care charts", "Weight, bowel and repositioning records", `/residents/${id}/charts`],
     [FileText, "Documents & visits", "Appointments, professional contact and resident journey", `/residents/${id}/records`],
     [
       BookHeart,
@@ -726,11 +728,11 @@ export default function ResidentDetailScreen() {
               }}
             />
             <Action
-              icon={FileText}
-              label="Record observation"
+              icon={LineChart}
+              label="Record chart (weight, bowel, repositioning)"
               onPress={() => {
                 setActions(false);
-                router.push(`/residents/${id}/record-note`);
+                router.push(`/residents/${id}/charts`);
               }}
             />
             <Action

@@ -18,6 +18,7 @@ export default function ResidentLayout() {
       <Stack.Screen name="record" options={{ title: 'Profile and legal record' }} />
       <Stack.Screen name="medication" options={{ title: 'Medication and MAR' }} />
       <Stack.Screen name="records" options={{ title: 'Documents and visits' }} />
+      <Stack.Screen name="charts" options={{ title: 'Care charts' }} />
     </Stack>
   );
 }

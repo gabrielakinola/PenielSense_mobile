@@ -42,9 +42,12 @@ export type CareObservationKind =
   | "MEAL_INTAKE"
   | "CARE_DECLINED"
   | "MOBILITY_ASSISTANCE"
-  | "ACTIVITY_PARTICIPATION";
+  | "ACTIVITY_PARTICIPATION"
+  | "WEIGHT"
+  | "BOWEL_MOVEMENT"
+  | "REPOSITIONING";
 export type CareObservationUnit =
-  "ML" | "COUNT" | "PORTION" | "STAFF" | "EVENT";
+  "ML" | "COUNT" | "PORTION" | "STAFF" | "EVENT" | "KG" | "BRISTOL";
 export interface CareObservationDto {
   kind: CareObservationKind;
   value: number;

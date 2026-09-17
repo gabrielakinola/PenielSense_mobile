@@ -1,65 +1,43 @@
 import { useEffect, useState } from 'react';
-import { Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
+import { useRouter } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
-import { careHomeApiClient, normalizeApiError } from '@/src/lib/api-client';
 import { useAuthStore } from '@/src/stores/auth-store';
-import {
-  markOfflineMutationFailed,
-  pendingOfflineMutations,
-  removeOfflineMutation,
-} from './offline-db';
+import { pendingOfflineMutations } from './offline-db';
+import { flushOfflineQueue, mutationNeedsAttention } from './offline-sync';
 import { useThemeColors } from '@/src/hooks/use-theme-colors';
 import { typography } from '@/src/theme/typography';
-
-let flushing = false;
-async function flush(ownerId: string) {
-  if (flushing) return 0;
-  flushing = true;
-  let synced = 0;
-  try {
-    const pending = await pendingOfflineMutations(ownerId);
-    for (const item of pending) {
-      try {
-        await careHomeApiClient.request({
-          method: item.method,
-          url: item.url,
-          data: item.payload,
-          headers: { 'Idempotency-Key': item.id },
-        });
-        await removeOfflineMutation(item.id);
-        synced += 1;
-      } catch (error) {
-        await markOfflineMutationFailed(item.id, normalizeApiError(error));
-        break;
-      }
-    }
-  } finally {
-    flushing = false;
-  }
-  return synced;
-}
 
 export function OfflineSyncProvider({ children }: { children: React.ReactNode }) {
   const ownerId = useAuthStore((state) => state.user?.id);
   const authenticated = useAuthStore((state) => state.isAuthenticated);
   const queryClient = useQueryClient();
+  const router = useRouter();
   const colors = useThemeColors();
   const [online, setOnline] = useState(true);
   const [pendingCount, setPendingCount] = useState(0);
+  const [attentionCount, setAttentionCount] = useState(0);
   useEffect(() => {
     let mounted = true;
     const refreshCount = async () => {
-      if (!ownerId) return setPendingCount(0);
+      if (!ownerId) {
+        setPendingCount(0);
+        setAttentionCount(0);
+        return;
+      }
       const pending = await pendingOfflineMutations(ownerId);
-      if (mounted) setPendingCount(pending.length);
+      if (mounted) {
+        setPendingCount(pending.length);
+        setAttentionCount(pending.filter(mutationNeedsAttention).length);
+      }
     };
     const unsubscribe = NetInfo.addEventListener((state) => {
       const connected = !!state.isConnected && state.isInternetReachable !== false;
       setOnline(connected);
       if (authenticated && ownerId && connected) {
-        void flush(ownerId)
-          .then(async (synced) => {
+        void flushOfflineQueue(ownerId)
+          .then(async ({ synced }) => {
             if (synced > 0) {
               await queryClient.invalidateQueries({ queryKey: ['carehome'] });
             }
@@ -74,15 +52,24 @@ export function OfflineSyncProvider({ children }: { children: React.ReactNode })
     return () => { mounted = false; unsubscribe(); clearInterval(timer); };
   }, [authenticated, ownerId, queryClient]);
   const showStatus = authenticated && (!online || pendingCount > 0);
+  const needsAttention = online && attentionCount > 0;
+  const message = !online
+    ? `Offline${pendingCount ? ` · ${pendingCount} update${pendingCount === 1 ? '' : 's'} saved on this device` : ' · showing saved records'}`
+    : needsAttention
+      ? `${attentionCount} saved update${attentionCount === 1 ? '' : 's'} need${attentionCount === 1 ? 's' : ''} attention · tap to review`
+      : `Syncing ${pendingCount} saved update${pendingCount === 1 ? '' : 's'}…`;
   return <View style={{ flex: 1 }}>
-    {showStatus ? <View
+    {showStatus ? <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={needsAttention ? 'Review updates that need attention' : 'View sync status'}
       accessibilityLiveRegion="polite"
-      style={{ backgroundColor: online ? colors.statusBg.watch : colors.statusBg.critical, paddingHorizontal: 16, paddingVertical: 7 }}
+      onPress={() => { if (pendingCount > 0) router.push('/sync-status'); }}
+      style={{ backgroundColor: !online || needsAttention ? colors.statusBg.critical : colors.statusBg.watch, paddingHorizontal: 16, paddingVertical: 7 }}
     >
-      <Text style={{ ...typography.label, textAlign: 'center', color: online ? colors.status.watch : colors.status.critical }}>
-        {!online ? `Offline${pendingCount ? ` · ${pendingCount} update${pendingCount === 1 ? '' : 's'} saved on this device` : ' · showing saved records'}` : `Syncing ${pendingCount} saved update${pendingCount === 1 ? '' : 's'}…`}
+      <Text style={{ ...typography.label, textAlign: 'center', color: !online || needsAttention ? colors.status.critical : colors.status.watch }}>
+        {message}
       </Text>
-    </View> : null}
+    </Pressable> : null}
     <View style={{ flex: 1 }}>{children}</View>
   </View>;
 }

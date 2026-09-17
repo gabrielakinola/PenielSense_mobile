@@ -78,6 +78,7 @@ export interface OfflineMutation {
   payload: unknown;
   createdAt: number;
   attempts: number;
+  lastError: string | null;
 }
 
 export async function enqueueOfflineMutation(
@@ -99,11 +100,12 @@ export async function pendingOfflineMutations(ownerId: string) {
   const db = await offlineDatabase();
   const rows = await db.getAllAsync<{
     id: string; owner_id: string; method: OfflineMutation['method']; url: string;
-    payload: string; created_at: number; attempts: number;
+    payload: string; created_at: number; attempts: number; last_error: string | null;
   }>('SELECT * FROM offline_outbox WHERE owner_id = ? ORDER BY created_at ASC', ownerId);
   return rows.map((row) => ({
     id: row.id, ownerId: row.owner_id, method: row.method, url: row.url,
     payload: JSON.parse(row.payload), createdAt: row.created_at, attempts: row.attempts,
+    lastError: row.last_error,
   } satisfies OfflineMutation));
 }
 
@@ -112,11 +114,27 @@ export async function removeOfflineMutation(id: string) {
   await db.runAsync('DELETE FROM offline_outbox WHERE id = ?', id);
 }
 
-export async function markOfflineMutationFailed(id: string, message: string) {
+export async function markOfflineMutationFailed(
+  id: string,
+  message: string,
+  countAttempt = true,
+) {
   const db = await offlineDatabase();
   await db.runAsync(
-    'UPDATE offline_outbox SET attempts = attempts + 1, last_error = ? WHERE id = ?',
+    `UPDATE offline_outbox
+     SET attempts = attempts + ?, last_error = ?
+     WHERE id = ?`,
+    countAttempt ? 1 : 0,
     message.slice(0, 500), id,
+  );
+}
+
+/** Resets the retry counter so a manually retried item is eligible for auto-sync again. */
+export async function resetOfflineMutationAttempts(id: string) {
+  const db = await offlineDatabase();
+  await db.runAsync(
+    'UPDATE offline_outbox SET attempts = 0, last_error = NULL WHERE id = ?',
+    id,
   );
 }
 

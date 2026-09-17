@@ -5,6 +5,7 @@ import type {
   QueryHandoverParams,
   PersonalHandoverDto,
 } from "@/src/types/carehome.types";
+import { cachedOnlineFirst } from "@/src/offline/offline-api";
 
 export async function getActiveHandover(params?: QueryHandoverParams) {
   const { data } = await careHomeApiClient.get<
@@ -28,10 +29,12 @@ export async function acknowledgeHandover(handoverId: string) {
 }
 
 export async function getMyHandover() {
-  const { data } = await careHomeApiClient.get<
-    ApiSuccessEnvelope<PersonalHandoverDto>
-  >("/carehome/handovers/mine/active");
-  return data.data;
+  return cachedOnlineFirst("personal-handover:active", async () => {
+    const { data } = await careHomeApiClient.get<
+      ApiSuccessEnvelope<PersonalHandoverDto>
+    >("/carehome/handovers/mine/active");
+    return data.data;
+  });
 }
 
 export async function saveMyHandoverDraft(additionalNote: string) {

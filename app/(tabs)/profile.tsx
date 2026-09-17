@@ -1,14 +1,12 @@
-import { Text, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
+import { Alert, Text, View } from 'react-native';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import {
-  Bell,
   Building2,
-  HelpCircle,
-  LogOut,
+  CloudUpload,
   Moon,
-  Settings,
-  Shield,
   Sun,
   Monitor,
 } from 'lucide-react-native';
@@ -26,6 +24,11 @@ import { getInitials } from '@/src/utils/format';
 import { typography } from '@/src/theme/typography';
 import { radius } from '@/src/theme/radius';
 import { useAuthStore } from '@/src/stores/auth-store';
+import {
+  clearOfflineData,
+  pendingOfflineMutations,
+} from '@/src/offline/offline-db';
+import { mutationNeedsAttention } from '@/src/offline/offline-sync';
 
 const THEME_OPTIONS: { mode: ThemeMode; label: string; icon: typeof Sun }[] = [
   { mode: 'light', label: 'Light', icon: Sun },
@@ -42,6 +45,59 @@ export default function ProfileScreen() {
   const careHome = useAuthStore((s) => s.careHome);
   const mode = useThemeStore((s) => s.mode);
   const setMode = useThemeStore((s) => s.setMode);
+  const queryClient = useQueryClient();
+  const [pendingSync, setPendingSync] = useState(0);
+  const [syncAttention, setSyncAttention] = useState(0);
+
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      const ownerId = user?.id;
+      if (!ownerId) return;
+      void pendingOfflineMutations(ownerId).then((items) => {
+        if (!active) return;
+        setPendingSync(items.length);
+        setSyncAttention(items.filter(mutationNeedsAttention).length);
+      });
+      return () => {
+        active = false;
+      };
+    }, [user?.id]),
+  );
+
+  const performLogout = useCallback(async () => {
+    const ownerId = user?.id;
+    try {
+      if (ownerId) await clearOfflineData(ownerId);
+    } catch {
+      // best effort — do not block sign-out
+    }
+    try {
+      queryClient.clear();
+    } catch {
+      // ignore
+    }
+    await logout();
+    router.replace('/login');
+  }, [user?.id, queryClient, logout, router]);
+
+  const confirmLogout = useCallback(() => {
+    if (pendingSync > 0) {
+      Alert.alert(
+        'Unsynced updates',
+        `${pendingSync} update${pendingSync === 1 ? '' : 's'} recorded on this device ${pendingSync === 1 ? 'has' : 'have'} not reached the server. Logging out now permanently removes ${pendingSync === 1 ? 'it' : 'them'} from this device.`,
+        [
+          { text: 'Stay signed in', style: 'cancel' },
+          { text: 'Log out anyway', style: 'destructive', onPress: () => void performLogout() },
+        ],
+      );
+      return;
+    }
+    Alert.alert('Log out?', 'Saved records on this device will be removed. You will need to sign in again to continue.', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Log out', style: 'destructive', onPress: () => void performLogout() },
+    ]);
+  }, [pendingSync, performLogout]);
 
   const themeLabel = THEME_OPTIONS.find((t) => t.mode === mode)?.label ?? 'System';
   const displayName = user
@@ -179,19 +235,18 @@ export default function ProfileScreen() {
           Account
         </Text>
         <Card style={{ padding: 0, overflow: 'hidden', marginBottom: 16 }}>
-          <ProfileMenuItem icon={Settings} label="Account Settings" />
-          <View
-            style={{ height: 1, backgroundColor: colors.border, marginHorizontal: 16 }}
+          <ProfileMenuItem
+            icon={CloudUpload}
+            label="Sync status"
+            value={
+              pendingSync === 0
+                ? 'All synced'
+                : syncAttention > 0
+                  ? `${pendingSync} pending · ${syncAttention} need attention`
+                  : `${pendingSync} pending`
+            }
+            onPress={() => router.push('/sync-status')}
           />
-          <ProfileMenuItem icon={Bell} label="Notifications" value="On" />
-          <View
-            style={{ height: 1, backgroundColor: colors.border, marginHorizontal: 16 }}
-          />
-          <ProfileMenuItem icon={Shield} label="Privacy & Security" />
-          <View
-            style={{ height: 1, backgroundColor: colors.border, marginHorizontal: 16 }}
-          />
-          <ProfileMenuItem icon={HelpCircle} label="Help & Support" />
         </Card>
 
         <Text
@@ -240,10 +295,7 @@ export default function ProfileScreen() {
         <AnimatedButton
           label="Log Out"
           variant="danger"
-          onPress={() => {
-            logout();
-            router.replace('/login');
-          }}
+          onPress={confirmLogout}
           accessibilityLabel="Log out"
         />
       </ScreenContainer>

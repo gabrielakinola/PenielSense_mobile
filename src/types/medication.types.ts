@@ -14,7 +14,7 @@ export interface MedicationOrderDto {
   minimumInterval?: string;
   maximumDailyDose?: string;
   instructions?: string;
-  status: "ACTIVE" | "PAUSED" | "STOPPED";
+  status: "ACTIVE" | "PAUSED" | "DISCONTINUED";
 }
 export interface MarAdministrationDto {
   id: string;
@@ -28,4 +28,8 @@ export interface MarAdministrationDto {
   prnEffect?: string;
   prnReviewDueAt?: string | null;
   administeredAt: string;
+  voidedAt?: string | null;
+  voidedBy?: string | null;
+  voidReason?: string | null;
+  version?: number;
 }

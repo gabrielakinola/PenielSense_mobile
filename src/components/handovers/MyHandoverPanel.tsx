@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Alert, Text, TextInput, View } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, ClipboardCheck } from "lucide-react-native";
 import { Card } from "@/src/components/ui/Card";
@@ -32,26 +33,49 @@ export function MyHandoverPanel() {
   const [hasEdited, setHasEdited] = useState(false);
   const query = useQuery({ queryKey: key, queryFn: getMyHandover });
   const handover = query.data;
+  const localDraftKey = handover
+    ? `peniel.personal-handover:${handover.userId}:${handover.dateKey}:${handover.shiftWindow}`
+    : null;
 
   useEffect(() => {
     if (!hasEdited && handover) setNote(handover.additionalNote);
   }, [handover, hasEdited]);
 
+  useEffect(() => {
+    if (!localDraftKey || !handover || handover.status === "SUBMITTED") return;
+    let active = true;
+    void AsyncStorage.getItem(localDraftKey).then((stored) => {
+      if (!active || stored === null || hasEdited) return;
+      setNote(stored);
+      setHasEdited(true);
+    });
+    return () => {
+      active = false;
+    };
+  }, [handover, hasEdited, localDraftKey]);
+
   const save = useMutation({
     mutationFn: saveMyHandoverDraft,
-    onSuccess: (data) => queryClient.setQueryData(key, data),
+    onSuccess: (data) => {
+      queryClient.setQueryData(key, data);
+      if (localDraftKey) void AsyncStorage.removeItem(localDraftKey);
+    },
   });
   const submit = useMutation({
     mutationFn: submitMyHandover,
     onSuccess: (data) => {
       queryClient.setQueryData(key, data);
+      if (localDraftKey) void AsyncStorage.removeItem(localDraftKey);
       Alert.alert(
         "Handover submitted",
         "Your shift record is saved for the next team.",
       );
     },
     onError: (error) =>
-      Alert.alert("Could not submit", normalizeApiError(error)),
+      Alert.alert(
+        "Not submitted yet",
+        `${normalizeApiError(error)} Your note remains saved on this device. Connect and submit again before ending the shift.`,
+      ),
   });
 
   useEffect(() => {
@@ -187,6 +211,7 @@ export function MyHandoverPanel() {
           onChangeText={(value) => {
             setNote(value);
             setHasEdited(true);
+            if (localDraftKey) void AsyncStorage.setItem(localDraftKey, value);
           }}
           editable={!submitted}
           multiline
