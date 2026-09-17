@@ -193,11 +193,18 @@ export default function HandoversScreen() {
     const rank = { attention: 0, watch: 1, normal: 2 } as const;
     return rank[a.riskLevel] - rank[b.riskLevel];
   });
-  const foundIndex = residents.findIndex(
+  const highlightedResidents = residents.filter(
+    (resident) =>
+      resident.attentionRequired || resident.handoverNotes.length > 0,
+  );
+  const displayedResidents = highlightedResidents.length
+    ? highlightedResidents
+    : residents;
+  const foundIndex = displayedResidents.findIndex(
     (resident) => resident.residentId === selectedResidentId,
   );
   const selectedIndex = foundIndex < 0 ? 0 : foundIndex;
-  const selectedResident = residents[selectedIndex];
+  const selectedResident = displayedResidents[selectedIndex];
 
   return shell(
     <ScreenContainer scroll={false} padded={false}>
@@ -277,6 +284,26 @@ export default function HandoversScreen() {
             />
 
             <Card style={{ marginBottom: 12 }}>
+              <Text
+                style={{
+                  ...typography.label,
+                  color: colors.primary,
+                  fontWeight: "700",
+                }}
+              >
+                HOME OVERVIEW
+              </Text>
+              <Text
+                style={{
+                  ...typography.body,
+                  color: colors.text,
+                  marginTop: 6,
+                  marginBottom: 10,
+                  lineHeight: 22,
+                }}
+              >
+                {handover.careHomeSummary.narrative}
+              </Text>
               <Text style={{ ...typography.caption, color: colors.secondary }}>
                 Sleep changes{" "}
                 {handover.careHomeSummary.residentsWithSleepChanges} · Movement{" "}
@@ -358,10 +385,16 @@ export default function HandoversScreen() {
               </View>
             </Card>
 
-            <SectionHeader title="Priority residents" />
+            <SectionHeader
+              title={
+                highlightedResidents.length
+                  ? "Highlighted for handover"
+                  : "Resident handovers"
+              }
+            />
             <FlatList
               horizontal
-              data={residents}
+              data={displayedResidents}
               keyExtractor={(resident) => resident.residentId}
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={{ gap: 8, paddingBottom: 12 }}
@@ -425,20 +458,20 @@ export default function HandoversScreen() {
             resident={item}
             index={index}
             position={selectedIndex + 1}
-            total={residents.length}
+            total={displayedResidents.length}
             onPrevious={
               selectedIndex > 0
                 ? () =>
                     setSelectedResidentId(
-                      residents[selectedIndex - 1].residentId,
+                      displayedResidents[selectedIndex - 1].residentId,
                     )
                 : undefined
             }
             onNext={
-              selectedIndex < residents.length - 1
+              selectedIndex < displayedResidents.length - 1
                 ? () =>
                     setSelectedResidentId(
-                      residents[selectedIndex + 1].residentId,
+                      displayedResidents[selectedIndex + 1].residentId,
                     )
                 : undefined
             }
