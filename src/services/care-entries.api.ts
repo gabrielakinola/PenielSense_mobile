@@ -9,6 +9,7 @@ import type {
   UpdateCareEntryPayload,
 } from '@/src/types/care-entry.types';
 import { cachedOnlineFirst, queueWhenOffline } from '@/src/offline/offline-api';
+import { prepareQueuedCareEntry } from '@/src/offline/prepare-care-entry';
 
 function careEntriesPath(residentId: string) {
   return `/carehome/residents/${residentId}/care-entries`;
@@ -28,7 +29,8 @@ export async function createCareEntry(
   const url = careEntriesPath(residentId);
   let saved: CareEntryDto | null = null;
   const result = await queueWhenOffline('POST', url, payload, async (requestPayload, requestId) => {
-    const response = await careHomeApiClient.post<ApiSuccessEnvelope<CareEntryDto>>(url, requestPayload, { headers: { 'Idempotency-Key': requestId } });
+    const prepared = await prepareQueuedCareEntry(url, requestPayload);
+    const response = await careHomeApiClient.post<ApiSuccessEnvelope<CareEntryDto>>(url, prepared, { headers: { 'Idempotency-Key': requestId } });
     saved = response.data.data;
   });
   return { saved, ...result };

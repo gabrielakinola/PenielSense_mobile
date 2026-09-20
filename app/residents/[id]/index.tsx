@@ -23,6 +23,7 @@ import {
   MessageSquarePlus,
   Pill,
   ShieldAlert,
+  ScanLine,
   Smile,
   Toilet,
   UserRound,
@@ -137,6 +138,7 @@ export default function ResidentDetailScreen() {
     [ClipboardList, "Assessments", "Needs, risks and current review dates", `/residents/${id}/assessments`],
     [Pill, "Medication and MAR", "Authorised medicines and administration record", `/residents/${id}/medication`],
     [LineChart, "Care charts", "Weight, bowel and repositioning records", `/residents/${id}/charts`],
+    [ScanLine, "Body map", "Skin, wound and injury location history", `/residents/${id}/body-map`],
     [FileText, "Documents & visits", "Appointments, professional contact and resident journey", `/residents/${id}/records`],
     [
       BookHeart,

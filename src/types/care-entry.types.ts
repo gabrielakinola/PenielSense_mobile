@@ -97,6 +97,8 @@ export interface CreateCareEntryPayload {
   observations?: CareObservationDto[];
   extractedObservations?: CareObservationDto[];
   handoverRequired?: boolean;
+  /** Client-only marker. Removed before POST after the queued note is extracted. */
+  requiresExtractionOnSync?: boolean;
 }
 
 export interface UpdateCareEntryPayload {

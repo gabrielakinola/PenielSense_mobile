@@ -6,6 +6,7 @@ import {
   removeOfflineMutation,
   type OfflineMutation,
 } from './offline-db';
+import { prepareQueuedCareEntry } from './prepare-care-entry';
 
 /**
  * After this many automatic attempts an item stops auto-syncing and is
@@ -69,10 +70,14 @@ export async function flushOfflineQueue(ownerId: string) {
         continue;
       }
       try {
+        const payload =
+          item.method === 'POST' && item.url.endsWith('/care-entries')
+            ? await prepareQueuedCareEntry(item.url, item.payload)
+            : item.payload;
         await careHomeApiClient.request({
           method: item.method,
           url: item.url,
-          data: item.payload,
+          data: payload,
           headers: { 'Idempotency-Key': item.id },
         });
         await removeOfflineMutation(item.id);
