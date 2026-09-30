@@ -107,6 +107,10 @@ export interface ApiResidentLatestVitalDto {
 export interface ApiResidentDto {
   id: string;
   fullName: string;
+  preferredName?: string | null;
+  photoUrl?: string | null;
+  supportSummary?: string | null;
+  profileTags?: string[];
   roomNo: string;
   wing: string | null;
   floor: string | null;
