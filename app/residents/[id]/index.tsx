@@ -8,6 +8,7 @@ import {
   Bath,
   Bed,
   BookHeart,
+  CalendarDays,
   ChevronRight,
   CircleAlert,
   CirclePlus,
@@ -39,6 +40,7 @@ import {
 } from "@/src/services/residents.api";
 import { getCareEntries } from "@/src/services/care-entries.api";
 import { getCareTasks } from "@/src/services/care-tasks.api";
+import { getOperationalRecords } from "@/src/services/operational-records.api";
 import { useThemeColors } from "@/src/hooks/use-theme-colors";
 import { typography } from "@/src/theme/typography";
 import { radius } from "@/src/theme/radius";
@@ -87,6 +89,11 @@ export default function ResidentDetailScreen() {
     queryFn: () => getCareTasks({ residentId: id }),
     enabled: !!id,
   });
+  const operationalRecords = useQuery({
+    queryKey: ["carehome", "operational-records", id],
+    queryFn: () => getOperationalRecords({ residentId: id }),
+    enabled: !!id,
+  });
   const timeline = useMemo(() => {
     const n = (notes.data?.items ?? []).flatMap((note) =>
       note.confirmedItems.map((item, i) => {
@@ -120,10 +127,32 @@ export default function ResidentDetailScreen() {
         detail: x.outcomeNote || x.status.replace("_", " "),
         source: "Care task",
       }));
-    return [...n, ...t]
+    const records = (operationalRecords.data ?? [])
+      .filter((record) =>
+        ["APPOINTMENT", "PROFESSIONAL_VISIT", "FAMILY_CONTACT"].includes(
+          record.kind,
+        ),
+      )
+      .map((record) => ({
+        id: `record-${record.id}`,
+        at: record.occurredAt,
+        category: "APPOINTMENT" as const,
+        title:
+          record.kind === "APPOINTMENT"
+            ? record.title
+            : record.kind === "PROFESSIONAL_VISIT"
+              ? `Professional visit · ${record.title}`
+              : `Family contact · ${record.title}`,
+        detail:
+          [record.professional, record.organisation, record.summary]
+            .filter(Boolean)
+            .join(" · ") || "Resident record",
+        source: "Resident schedule",
+      }));
+    return [...n, ...t, ...records]
       .filter((x) => filter === "ALL" || x.category === filter)
       .sort((a, b) => +new Date(b.at) - +new Date(a.at));
-  }, [filter, notes.data, tasks.data]);
+  }, [filter, notes.data, operationalRecords.data, tasks.data]);
   const p = profile.data;
   const name = resident.data?.fullName ?? brief.data?.displayName ?? "Resident";
   const about = [
@@ -828,7 +857,7 @@ function Action({
   );
 }
 function timelineVisual(
-  category: CareEntryCategory,
+  category: CareEntryCategory | "APPOINTMENT",
   colors: ReturnType<typeof useThemeColors>,
 ) {
   const map = {
@@ -842,19 +871,25 @@ function timelineVisual(
     MEDICATION_OBSERVATION: Pill,
     INCIDENT_CONCERN: CircleAlert,
     GENERAL_WELLBEING: HeartHandshake,
+    APPOINTMENT: CalendarDays,
   } as const;
   const concern = category === "INCIDENT_CONCERN";
   const fluid = category === "FLUID";
+  const appointment = category === "APPOINTMENT";
   return {
     icon: map[category] ?? ClipboardList,
     color: concern
       ? colors.status.critical
-      : fluid
+      : appointment
+        ? "#6D5CE7"
+        : fluid
         ? colors.primary
         : colors.status.good,
     background: concern
       ? colors.statusBg.critical
-      : fluid
+      : appointment
+        ? "#EFEDFF"
+        : fluid
         ? `${colors.primary}18`
         : colors.statusBg.good,
   };
