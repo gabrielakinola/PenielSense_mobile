@@ -69,6 +69,11 @@ export const useAuthStore = create<AuthState>()(
           email: email.trim(),
           password,
         });
+        const careEnabled = data.careHome.enabledProducts?.includes('PENIEL_CARE') !== false;
+        const careSuspended = data.careHome.suspendedProducts?.includes('PENIEL_CARE') === true;
+        if (!careEnabled || careSuspended || ['PAUSED', 'CANCELLED'].includes(data.careHome.subscriptionStatus ?? '')) {
+          throw new Error('Peniel Care is not active for this organisation. Please contact your manager.');
+        }
         await Promise.all([
           SecureStore.setItemAsync(ACCESS_TOKEN_KEY, data.accessToken, secureOptions),
           SecureStore.setItemAsync(REFRESH_TOKEN_KEY, data.refreshToken, secureOptions),

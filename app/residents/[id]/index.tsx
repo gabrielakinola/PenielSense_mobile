@@ -129,16 +129,20 @@ export default function ResidentDetailScreen() {
       }));
     const records = (operationalRecords.data ?? [])
       .filter((record) =>
-        ["APPOINTMENT", "PROFESSIONAL_VISIT", "FAMILY_CONTACT"].includes(
+        ["DOCUMENT", "APPOINTMENT", "PROFESSIONAL_VISIT", "FAMILY_CONTACT"].includes(
           record.kind,
         ),
       )
       .map((record) => ({
         id: `record-${record.id}`,
         at: record.occurredAt,
-        category: "APPOINTMENT" as const,
+        category: (record.kind === "DOCUMENT" ? "DOCUMENT" : "APPOINTMENT") as
+          | "DOCUMENT"
+          | "APPOINTMENT",
         title:
-          record.kind === "APPOINTMENT"
+          record.kind === "DOCUMENT"
+            ? `Document · ${record.title}`
+            : record.kind === "APPOINTMENT"
             ? record.title
             : record.kind === "PROFESSIONAL_VISIT"
               ? `Professional visit · ${record.title}`
@@ -857,7 +861,7 @@ function Action({
   );
 }
 function timelineVisual(
-  category: CareEntryCategory | "APPOINTMENT",
+  category: CareEntryCategory | "APPOINTMENT" | "DOCUMENT",
   colors: ReturnType<typeof useThemeColors>,
 ) {
   const map = {
@@ -872,22 +876,24 @@ function timelineVisual(
     INCIDENT_CONCERN: CircleAlert,
     GENERAL_WELLBEING: HeartHandshake,
     APPOINTMENT: CalendarDays,
+    DOCUMENT: FileText,
   } as const;
   const concern = category === "INCIDENT_CONCERN";
   const fluid = category === "FLUID";
   const appointment = category === "APPOINTMENT";
+  const document = category === "DOCUMENT";
   return {
     icon: map[category] ?? ClipboardList,
     color: concern
       ? colors.status.critical
-      : appointment
+      : appointment || document
         ? "#6D5CE7"
         : fluid
         ? colors.primary
         : colors.status.good,
     background: concern
       ? colors.statusBg.critical
-      : appointment
+      : appointment || document
         ? "#EFEDFF"
         : fluid
         ? `${colors.primary}18`

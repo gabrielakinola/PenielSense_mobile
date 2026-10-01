@@ -10,6 +10,7 @@ export interface CreateIncidentPayload {
   description: string;
   immediateAction: string;
   injuryDetails?: string;
+  bodyMap?: Array<{ view: 'FRONT' | 'BACK'; x: number; y: number; label: string; note?: string }>;
   witnesses?: string;
   medicalAttention?: string;
   familyNotified: boolean;

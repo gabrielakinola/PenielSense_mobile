@@ -23,6 +23,13 @@ export interface CareHomeSummaryDto {
   zip: string;
   status: string;
   timezone?: string;
+  enabledProducts?: Array<'PENIEL_CARE' | 'PENIELSENSE' | 'PENIEL_EMAR' | 'EMAR'>;
+  subscriptionStatus?: 'TRIAL' | 'ACTIVE' | 'PAUSED' | 'CANCELLED';
+  subscriptionPackage?: 'CARE_ESSENTIALS' | 'CARE_INTELLIGENCE' | 'CONNECTED_CARE' | 'COMPLETE' | 'CUSTOM';
+  suspendedProducts?: Array<'PENIEL_CARE' | 'PENIELSENSE' | 'PENIEL_EMAR' | 'EMAR'>;
+  limits?: { residents: number; staff: number; devices: number };
+  featureOverrides?: Record<string, boolean>;
+  packageName?: string;
 }
 
 export interface CareHomeLoginData {

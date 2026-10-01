@@ -21,6 +21,10 @@ export interface CareTaskDto {
   status: CareTaskStatus;
   outcomeNote: string;
   quantity: string;
+  assignedTo: string | null;
+  assignedToName: string | null;
+  assignedBy: string | null;
+  assignedAt: string | null;
   completedBy: string | null;
   completedAt: string | null;
   version: number;
@@ -31,6 +35,7 @@ export interface CareTaskDto {
 export interface CreateCareTaskPayload {
   residentId: string;
   carePlanId?: string;
+  assignedTo?: string;
   title: string;
   category: string;
   instructions: string;

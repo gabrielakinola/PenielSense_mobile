@@ -54,7 +54,12 @@ export default function TasksScreen() {
   });
   const appointmentsQuery = useQuery({
     queryKey: ["carehome", "operational-records", "appointments", window],
-    queryFn: () => getOperationalRecords({ ...window, kind: "APPOINTMENT" }),
+    queryFn: async () => {
+      const records = await getOperationalRecords(window);
+      return records.filter((record) =>
+        ["APPOINTMENT", "PROFESSIONAL_VISIT"].includes(record.kind),
+      );
+    },
   });
   const residentsQuery = useQuery({
     queryKey: ["carehome", "residents", "task-names"],
@@ -169,7 +174,7 @@ export default function TasksScreen() {
                     </Text>
                     <View style={{ flexDirection: "row", alignItems: "center", gap: 5, marginTop: 8 }}>
                       <Users size={13} color={colors.secondary} />
-                      <Text style={{ ...typography.label, color: colors.secondary }}>Visible to all carers</Text>
+                      <Text style={{ ...typography.label, color: colors.secondary }}>{task?.assignedToName ? `Owner: ${task.assignedToName} · visible to team` : "Visible to all carers"}</Text>
                     </View>
                   </View>
                   <ChevronRight size={18} color={colors.secondary} />

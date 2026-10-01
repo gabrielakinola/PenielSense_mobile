@@ -36,6 +36,9 @@ export default function ResidentsScreen() {
   const debouncedSearch = useDebouncedValue(search, 300);
   const [refreshing, setRefreshing] = useState(false);
   const user = useAuthStore((state) => state.user);
+  const careHome = useAuthStore((state) => state.careHome);
+  const hasSense = careHome?.enabledProducts?.includes('PENIELSENSE') && !careHome?.suspendedProducts?.includes('PENIELSENSE');
+  const hasIntelligence = hasSense || careHome?.subscriptionPackage === 'CARE_INTELLIGENCE' || careHome?.featureOverrides?.intelligence === true;
 
   const intelligenceFilter = useUiStore((s) => s.residentIntelligenceFilter);
   const setIntelligenceFilter = useUiStore(
@@ -55,11 +58,11 @@ export default function ResidentsScreen() {
     queryFn: () =>
       getCareHomeResidents({
         search: debouncedSearch || undefined,
-        intelligence:
+        intelligence: hasIntelligence ? (
           intelligenceFilter === "all"
             ? undefined
-            : (intelligenceFilter as ResidentIntelligenceFilter),
-        sort: "intelligence",
+            : (intelligenceFilter as ResidentIntelligenceFilter)) : undefined,
+        sort: hasIntelligence ? "intelligence" : "name",
       }),
     refetchInterval: POLL_MS,
   });
@@ -67,6 +70,7 @@ export default function ResidentsScreen() {
   const badgesQuery = useQuery({
     queryKey: ["carehome", "intelligence-badges"],
     queryFn: getResidentIntelligenceBadges,
+    enabled: hasIntelligence,
     refetchInterval: POLL_MS,
   });
 

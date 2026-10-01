@@ -77,7 +77,8 @@ export function ResidentCard({
   const colors = useThemeColors();
   const theme = useResolvedTheme();
   const { firstName, lastName } = splitResidentName(resident.fullName);
-  const status = residentIntelligenceStatus(badge, resident.devices.length > 0);
+  const devices = Array.isArray(resident.devices) ? resident.devices : [];
+  const status = residentIntelligenceStatus(badge, devices.length > 0);
   const avatarColor = avatarColorForName(resident.fullName);
   const accent = accentForTone(status.tone, colors);
   const [photoFailed, setPhotoFailed] = useState(false);
@@ -244,7 +245,7 @@ export function ResidentCard({
                       </Text>
                     </View>
                   ) : null}
-                  {resident.devices.slice(0, 3).map((device) => (
+                  {devices.slice(0, 3).map((device) => (
                     <View
                       key={device.id}
                       style={{

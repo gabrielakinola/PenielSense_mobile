@@ -1,4 +1,6 @@
-import { Text, View } from 'react-native';
+import { useCallback, useState } from 'react';
+import { Alert, Text, View } from 'react-native';
+import { useFocusEffect } from 'expo-router';
 import { useRouter } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import {
@@ -26,6 +28,10 @@ import { getInitials } from '@/src/utils/format';
 import { typography } from '@/src/theme/typography';
 import { radius } from '@/src/theme/radius';
 import { useAuthStore } from '@/src/stores/auth-store';
+import { useQueryClient } from '@tanstack/react-query';
+import { clearOfflineData, pendingOfflineMutations } from '@/src/offline/offline-db';
+import { mutationNeedsAttention } from '@/src/offline/offline-sync';
+import { CloudUpload } from 'lucide-react-native';
 
 const THEME_OPTIONS: { mode: ThemeMode; label: string; icon: typeof Sun }[] = [
   { mode: 'light', label: 'Light', icon: Sun },
@@ -42,6 +48,11 @@ export default function ProfileScreen() {
   const careHome = useAuthStore((s) => s.careHome);
   const mode = useThemeStore((s) => s.mode);
   const setMode = useThemeStore((s) => s.setMode);
+  const queryClient = useQueryClient();
+  const [pendingSync,setPendingSync]=useState(0); const [syncAttention,setSyncAttention]=useState(0);
+  useFocusEffect(useCallback(()=>{let active=true;if(user?.id)void pendingOfflineMutations(user.id).then(items=>{if(active){setPendingSync(items.length);setSyncAttention(items.filter(mutationNeedsAttention).length)}});return()=>{active=false}},[user?.id]));
+  const performLogout=useCallback(async()=>{if(user?.id)await clearOfflineData(user.id);queryClient.clear();await logout();router.replace('/login')},[user?.id,queryClient,logout,router]);
+  const confirmLogout=useCallback(()=>{if(pendingSync){Alert.alert('Unsynced updates',`${pendingSync} care update${pendingSync===1?' has':'s have'} not reached the server. Logging out now permanently removes ${pendingSync===1?'it':'them'} from this device.`,[{text:'Stay signed in',style:'cancel'},{text:'Log out anyway',style:'destructive',onPress:()=>void performLogout()}])}else void performLogout()},[pendingSync,performLogout]);
 
   const themeLabel = THEME_OPTIONS.find((t) => t.mode === mode)?.label ?? 'System';
   const displayName = user
@@ -179,6 +190,8 @@ export default function ProfileScreen() {
           Account
         </Text>
         <Card style={{ padding: 0, overflow: 'hidden', marginBottom: 16 }}>
+          <ProfileMenuItem icon={CloudUpload} label="Sync status" value={pendingSync?`${pendingSync} pending${syncAttention?` · ${syncAttention} need attention`:''}`:'All synced'} onPress={()=>router.push('/sync-status')} />
+          <View style={{ height: 1, backgroundColor: colors.border, marginHorizontal: 16 }} />
           <ProfileMenuItem icon={Settings} label="Account Settings" />
           <View
             style={{ height: 1, backgroundColor: colors.border, marginHorizontal: 16 }}
@@ -240,10 +253,7 @@ export default function ProfileScreen() {
         <AnimatedButton
           label="Log Out"
           variant="danger"
-          onPress={() => {
-            logout();
-            router.replace('/login');
-          }}
+          onPress={confirmLogout}
           accessibilityLabel="Log out"
         />
       </ScreenContainer>

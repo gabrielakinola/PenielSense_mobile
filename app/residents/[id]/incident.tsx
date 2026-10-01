@@ -9,6 +9,7 @@ import { normalizeApiError } from '@/src/lib/api-client';
 import { useThemeColors } from '@/src/hooks/use-theme-colors';
 import { typography } from '@/src/theme/typography';
 import { radius } from '@/src/theme/radius';
+import { BodyMapSelector, type BodyMapPoint } from '@/src/components/incidents/BodyMapSelector';
 
 const TYPES = ['FALL', 'INJURY', 'MEDICATION', 'BEHAVIOUR', 'MISSING_PERSON', 'SAFEGUARDING', 'OTHER'];
 const SEVERITIES = ['LOW', 'MODERATE', 'HIGH', 'CRITICAL'];
@@ -24,6 +25,8 @@ export default function IncidentScreen() {
   const [immediateAction, setImmediateAction] = useState('');
   const [safeguarding, setSafeguarding] = useState(false);
   const [safeguardingRationale, setSafeguardingRationale] = useState('');
+  const [injuryDetails, setInjuryDetails] = useState('');
+  const [bodyMap, setBodyMap] = useState<BodyMapPoint[]>([]);
   const [saving, setSaving] = useState(false);
   const inputStyle = { ...typography.body, color: colors.text, minHeight: 48, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, padding: 12, marginTop: 6 };
   const valid = location.trim() && description.trim().length >= 3 && immediateAction.trim().length >= 3 && (!safeguarding || safeguardingRationale.trim().length >= 3);
@@ -36,6 +39,7 @@ export default function IncidentScreen() {
         immediateAction: immediateAction.trim(), familyNotified: false,
         managerNotified: true, safeguardingConcern: safeguarding,
         safeguardingRationale: safeguardingRationale.trim(),
+        injuryDetails: injuryDetails.trim(), bodyMap,
       });
       Alert.alert(
         result.queued ? 'Saved offline' : 'Incident reported',
@@ -62,6 +66,7 @@ export default function IncidentScreen() {
           {SEVERITIES.map((value) => <Pressable key={value} onPress={() => setSeverity(value)} style={{ paddingHorizontal: 10, paddingVertical: 7, borderRadius: radius.full, borderWidth: 1, borderColor: severity === value ? colors.status.critical : colors.border }}><Text style={{ ...typography.label, color: severity === value ? colors.status.critical : colors.secondary }}>{value}</Text></Pressable>)}
         </View>
         {[['Location', location, setLocation], ['What happened?', description, setDescription], ['Immediate action taken', immediateAction, setImmediateAction]].map(([label, value, setter]) => <View key={label as string} style={{ marginBottom: 14 }}><Text style={{ ...typography.label, color: colors.secondary }}>{label as string}</Text><TextInput multiline={label !== 'Location'} value={value as string} onChangeText={setter as (text: string) => void} style={inputStyle} placeholder={label as string} placeholderTextColor={colors.secondary} /></View>)}
+        {(type === 'INJURY' || type === 'FALL') ? <View style={{ marginBottom: 14 }}><Text style={{ ...typography.label, color: colors.secondary }}>INJURY / SKIN OBSERVATIONS</Text><TextInput multiline value={injuryDetails} onChangeText={setInjuryDetails} style={inputStyle} placeholder="Describe any injury or visible mark" placeholderTextColor={colors.secondary}/><BodyMapSelector value={bodyMap} onChange={setBodyMap}/></View> : null}
         <Pressable onPress={() => setSafeguarding((value) => !value)} style={{ minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 10 }}><View style={{ width: 24, height: 24, borderRadius: 6, borderWidth: 1, borderColor: safeguarding ? colors.status.critical : colors.border, backgroundColor: safeguarding ? colors.status.critical : 'transparent', alignItems: 'center', justifyContent: 'center' }}>{safeguarding ? <Check size={16} color={colors.background} /> : null}</View><Text style={{ ...typography.bodyMedium, color: colors.text }}>This may be a safeguarding concern</Text></Pressable>
         {safeguarding ? <View style={{ marginTop: 8 }}><Text style={{ ...typography.label, color: colors.status.critical }}>Why is safeguarding being considered?</Text><TextInput multiline value={safeguardingRationale} onChangeText={setSafeguardingRationale} style={inputStyle} placeholder="Record the concern and immediate protection action" placeholderTextColor={colors.secondary} /></View> : null}
         <Pressable disabled={!valid || saving} onPress={submit} style={{ minHeight: 50, borderRadius: radius.md, backgroundColor: colors.status.critical, opacity: valid && !saving ? 1 : 0.45, alignItems: 'center', justifyContent: 'center', marginTop: 20, marginBottom: 28 }}><Text style={{ ...typography.bodyMedium, color: colors.background }}>{saving ? 'Saving…' : 'Submit report'}</Text></Pressable>

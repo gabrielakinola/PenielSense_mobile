@@ -122,6 +122,9 @@ export interface ApiResidentDto {
   medicalHistory: string | null;
   careTags: string[];
   wellnessStatus: ApiResidentWellnessStatus;
+  recordStatus?: 'ACTIVE' | 'ARCHIVED';
+  archivedAt?: string | null;
+  archiveReason?: string | null;
   latestVital: ApiResidentLatestVitalDto | null;
   latestSleepScore?: number | null;
   activitySteps?: number | null;

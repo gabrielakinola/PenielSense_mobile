@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { View, Pressable, Text, Platform } from 'react-native';
 import type { ComponentProps } from 'react';
 import { Tabs, useRouter } from 'expo-router';
-import { Home, Users, Flag, ClipboardList, User, ListChecks } from 'lucide-react-native';
+import { Home, Users, Flag, ClipboardList, User, ListChecks, Pill } from 'lucide-react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemeColors } from '@/src/hooks/use-theme-colors';
@@ -20,6 +20,7 @@ const TAB_CONFIG = [
   { name: 'index', title: 'Today', icon: Home },
   { name: 'residents', title: 'Residents', icon: Users },
   { name: 'tasks', title: 'Tasks', icon: ListChecks },
+  { name: 'medications', title: 'Meds', icon: Pill },
   { name: 'flags', title: 'Alerts', icon: Flag },
   { name: 'handovers', title: 'Handover', icon: ClipboardList },
   { name: 'profile', title: 'Profile', icon: User },
@@ -108,10 +109,12 @@ function CustomTabBar({ state, descriptors, navigation }: TabBarProps) {
   const insets = useSafeAreaInsets();
   const { selection } = useHaptics();
   const role = useAuthStore((s) => s.user?.role);
+  const careHome = useAuthStore((s) => s.careHome);
+  const emarEnabled = careHome?.enabledProducts?.includes('PENIEL_EMAR') === true && careHome?.suspendedProducts?.includes('PENIEL_EMAR') !== true;
   const order = isCareHomeManagerRole(role) ? MANAGER_TAB_ORDER : CARER_TAB_ORDER;
   const allowed = new Set<string>(order);
   const routes = [...state.routes]
-    .filter((route) => allowed.has(route.name))
+    .filter((route) => allowed.has(route.name) && (route.name !== 'medications' || emarEnabled))
     .sort(
       (a, b) =>
         (order as readonly string[]).indexOf(a.name) -
@@ -202,6 +205,7 @@ export default function TabLayout() {
         name="tasks"
         options={{ title: 'Tasks', href: isManager ? null : undefined }}
       />
+      <Tabs.Screen name="medications" options={{ title: 'Meds' }} />
       <Tabs.Screen name="flags" options={{ title: isManager ? 'Review' : 'Alerts' }} />
       <Tabs.Screen name="handovers" options={{ title: 'Handovers' }} />
       <Tabs.Screen name="profile" options={{ title: 'Profile' }} />
