@@ -66,6 +66,8 @@ export default function CarePlanScreen() {
   const isManager = isCareHomeManagerRole(
     useAuthStore((state) => state.user?.role),
   );
+  const [isEditing, setIsEditing] = useState(false);
+  const canEdit = isManager && isEditing;
   const query = useQuery({
     queryKey: ["carehome", "care-plan", id],
     queryFn: () => getCarePlan(id),
@@ -79,7 +81,7 @@ export default function CarePlanScreen() {
   const recommendations = useQuery({
     queryKey: ["carehome", "care-plan-recommendations", id],
     queryFn: () => getCarePlanRecommendations(id),
-    enabled: !!id && isManager,
+    enabled: !!id && canEdit,
   });
   const [sections, setSections] = useState<CarePlanSectionDto[]>([]);
   const [changeReason, setChangeReason] = useState("");
@@ -100,7 +102,7 @@ export default function CarePlanScreen() {
             : (query.data?.effectiveFrom ?? undefined),
         reviewDueAt: query.data?.reviewDueAt ?? undefined,
       }),
-    onSuccess: async () => {
+    onSuccess: async (saved) => {
       setChangeReason("");
       await queryClient.invalidateQueries({
         queryKey: ["carehome", "care-plan", id],
@@ -109,6 +111,7 @@ export default function CarePlanScreen() {
         "Care plan saved",
         "The new version is now available to authorised staff.",
       );
+      if (saved.status === "ACTIVE") setIsEditing(false);
     },
     onError: (error) =>
       Alert.alert("Could not save care plan", normalizeApiError(error)),
@@ -163,7 +166,7 @@ export default function CarePlanScreen() {
             active="care-plan"
           />
         ) : null}
-        {!isManager && query.data ? (
+        {query.data ? (
           <Card
             style={{
               marginBottom: 14,
@@ -211,16 +214,53 @@ export default function CarePlanScreen() {
                 </Text>
               </View>
             ) : null}
+            {isManager && !isEditing ? (
+              <Pressable
+                onPress={() => setIsEditing(true)}
+                style={{
+                  minHeight: 46,
+                  borderRadius: radius.md,
+                  backgroundColor: colors.primary,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  marginTop: 14,
+                }}
+              >
+                <Text style={{ ...typography.bodyMedium, color: "#FFF" }}>
+                  Edit or update care plan
+                </Text>
+              </Pressable>
+            ) : null}
+            {isManager && isEditing ? (
+              <Pressable
+                onPress={() => {
+                  setSections(query.data?.sections.map((section) => ({ ...section })) ?? []);
+                  setChangeReason("");
+                  setIsEditing(false);
+                }}
+                style={{ minHeight: 44, alignItems: "center", justifyContent: "center", marginTop: 8 }}
+              >
+                <Text style={{ ...typography.bodyMedium, color: colors.secondary }}>Cancel editing</Text>
+              </Pressable>
+            ) : null}
           </Card>
         ) : null}
-        {!isManager && !query.data ? (
+        {!query.data && !canEdit ? (
           <EmptyState
             icon={ClipboardList}
             title="No care plan available"
-            description="A manager has not published this resident’s care plan yet."
+            description={isManager ? "Create the resident’s first care plan when you are ready." : "A manager has not published this resident’s care plan yet."}
           />
         ) : null}
-        {isManager && recommendations.data?.recommendations.length ? (
+        {isManager && !query.data && !isEditing ? (
+          <Pressable
+            onPress={() => setIsEditing(true)}
+            style={{ minHeight: 48, borderRadius: radius.md, backgroundColor: colors.primary, alignItems: "center", justifyContent: "center", marginBottom: 14 }}
+          >
+            <Text style={{ ...typography.bodyMedium, color: "#FFF" }}>Create care plan</Text>
+          </Pressable>
+        ) : null}
+        {canEdit && recommendations.data?.recommendations.length ? (
           <Card
             style={{
               marginBottom: 14,
@@ -289,7 +329,7 @@ export default function CarePlanScreen() {
             key={`${index}-${section.category}`}
             style={{ marginBottom: 14 }}
           >
-            {isManager ? (
+            {canEdit ? (
               <View
                 style={{
                   flexDirection: "row",
@@ -350,7 +390,7 @@ export default function CarePlanScreen() {
             ]
               .filter(
                 ([, field]) =>
-                  isManager ||
+                  canEdit ||
                   Boolean(section[field as keyof CarePlanSectionDto]),
               )
               .map(([label, field]) => (
@@ -360,7 +400,7 @@ export default function CarePlanScreen() {
                   >
                     {label}
                   </Text>
-                  {isManager ? (
+                  {canEdit ? (
                     <TextInput
                       multiline
                       value={String(
@@ -397,7 +437,7 @@ export default function CarePlanScreen() {
                   )}
                 </View>
               ))}
-            {isManager && section.supportInstructions.trim() ? (
+            {canEdit && section.supportInstructions.trim() ? (
               <Pressable
                 onPress={() =>
                   router.push({
@@ -427,7 +467,7 @@ export default function CarePlanScreen() {
                 </Text>
               </Pressable>
             ) : null}
-            {isManager ? (
+            {canEdit ? (
               <Pressable
                 onPress={() =>
                   setSections((items) =>
@@ -454,7 +494,7 @@ export default function CarePlanScreen() {
             ) : null}
           </Card>
         ))}
-        {isManager ? (
+        {canEdit ? (
           <>
             <Pressable
               onPress={() => router.push(`/residents/${id}/create-task`)}

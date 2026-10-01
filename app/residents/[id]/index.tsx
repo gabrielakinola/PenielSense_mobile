@@ -164,6 +164,7 @@ export default function ResidentDetailScreen() {
       UserRound,
       "Profile & About Me",
       p?.aboutMe?.whatMatters || "Preferences, communication and what matters",
+      `/residents/${id}/about`,
     ],
     [
       BookHeart,

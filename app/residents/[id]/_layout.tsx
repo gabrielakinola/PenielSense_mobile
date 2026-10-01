@@ -12,6 +12,7 @@ export default function ResidentLayout() {
       <Stack.Screen name="record-note" options={{ title: 'Record care note' }} />
       <Stack.Screen name="create-task" options={{ title: 'Create task' }} />
       <Stack.Screen name="care-plan" options={{ title: 'Care plan' }} />
+      <Stack.Screen name="about" options={{ title: 'About resident' }} />
       <Stack.Screen name="incident" options={{ title: 'Report concern' }} />
       <Stack.Screen name="report" options={{ title: 'Evidence report' }} />
     </Stack>
