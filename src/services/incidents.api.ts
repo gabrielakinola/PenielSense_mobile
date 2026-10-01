@@ -10,13 +10,13 @@ export interface CreateIncidentPayload {
   description: string;
   immediateAction: string;
   injuryDetails?: string;
-  bodyMap?: Array<{ view: 'FRONT' | 'BACK'; x: number; y: number; label: string; note?: string }>;
   witnesses?: string;
   medicalAttention?: string;
   familyNotified: boolean;
   managerNotified: boolean;
   safeguardingConcern: boolean;
   safeguardingRationale?: string;
+  bodyMap?: Array<{ view: 'FRONT' | 'BACK'; x: number; y: number; type: string; description?: string }>;
 }
 
 export function createIncident(payload: CreateIncidentPayload) {

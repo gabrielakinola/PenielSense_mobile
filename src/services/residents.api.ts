@@ -4,6 +4,7 @@ import type {
   ApiResidentDto,
   QueryResidentsParams,
   ResidentCareProfileDto,
+  ResidentAssessmentDto,
 } from '@/src/types/carehome.types';
 import { cachedOnlineFirst } from '@/src/offline/offline-api';
 
@@ -13,6 +14,13 @@ export async function getCareHomeResidents(params?: QueryResidentsParams) {
     const { data } = await careHomeApiClient.get<
       ApiSuccessEnvelope<ApiResidentDto[]>
     >('/carehome/residents', { params });
+    return data.data;
+  });
+}
+
+export async function getResidentAssessments(id: string) {
+  return cachedOnlineFirst(`resident-assessments:${id}`, async () => {
+    const { data } = await careHomeApiClient.get<ApiSuccessEnvelope<ResidentAssessmentDto[]>>('/carehome/assessments', { params: { residentId: id } });
     return data.data;
   });
 }

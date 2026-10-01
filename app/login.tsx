@@ -43,7 +43,6 @@ export default function LoginScreen() {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -175,26 +174,6 @@ export default function LoginScreen() {
                 </View>
               </View>
 
-              <Pressable
-                onPress={() => setRememberMe((prev) => !prev)}
-                style={styles.rememberRow}
-                accessibilityRole="checkbox"
-                accessibilityState={{ checked: rememberMe }}
-              >
-                <View
-                  style={[
-                    styles.checkbox,
-                    {
-                      borderColor: colors.border,
-                      backgroundColor: rememberMe ? colors.primary : 'transparent',
-                    },
-                  ]}
-                >
-                  {rememberMe ? <Text style={styles.checkmark}>✓</Text> : null}
-                </View>
-                <Text style={{ ...typography.caption, color: colors.secondary }}>Remember me</Text>
-              </Pressable>
-
               {error ? (
                 <Text style={{ ...typography.caption, color: colors.status.critical }}>{error}</Text>
               ) : null}
@@ -247,24 +226,6 @@ const styles = StyleSheet.create({
     right: 12,
     top: 14,
     padding: 4,
-  },
-  rememberRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  checkbox: {
-    width: 18,
-    height: 18,
-    borderRadius: 4,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checkmark: {
-    color: '#FFFFFF',
-    fontSize: 11,
-    fontWeight: '700',
   },
   footerNote: {
     flexDirection: 'row',

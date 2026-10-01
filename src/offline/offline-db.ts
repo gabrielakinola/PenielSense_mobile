@@ -114,17 +114,28 @@ export async function removeOfflineMutation(id: string) {
   await db.runAsync('DELETE FROM offline_outbox WHERE id = ?', id);
 }
 
-export async function markOfflineMutationFailed(id: string, message: string, countAttempt = true) {
+export async function markOfflineMutationFailed(
+  id: string,
+  message: string,
+  countAttempt = true,
+) {
   const db = await offlineDatabase();
   await db.runAsync(
-    'UPDATE offline_outbox SET attempts = attempts + ?, last_error = ? WHERE id = ?',
-    countAttempt ? 1 : 0, message.slice(0, 500), id,
+    `UPDATE offline_outbox
+     SET attempts = attempts + ?, last_error = ?
+     WHERE id = ?`,
+    countAttempt ? 1 : 0,
+    message.slice(0, 500), id,
   );
 }
 
+/** Resets the retry counter so a manually retried item is eligible for auto-sync again. */
 export async function resetOfflineMutationAttempts(id: string) {
   const db = await offlineDatabase();
-  await db.runAsync('UPDATE offline_outbox SET attempts = 0, last_error = NULL WHERE id = ?', id);
+  await db.runAsync(
+    'UPDATE offline_outbox SET attempts = 0, last_error = NULL WHERE id = ?',
+    id,
+  );
 }
 
 export async function clearOfflineData(ownerId: string) {

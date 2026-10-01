@@ -206,13 +206,14 @@ export function CareEntryComposer({
         observations: [],
         extractedObservations: [],
         handoverRequired,
+        requiresExtractionOnSync: true,
       });
     },
     onSuccess: async (result) => {
       Alert.alert(
         result.queued ? "Saved on this phone" : "Care note saved",
         result.queued
-          ? "The original wording is safe and will sync automatically when the connection returns. It is saved as a general care update because extraction needs a connection."
+          ? "The original wording is safe. When the connection returns, it will sync and be split into the relevant care categories."
           : "The care note has been saved.",
       );
       resetComposer();

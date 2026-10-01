@@ -164,6 +164,11 @@ export interface ResidentCareProfileDto {
     phone?: string;
     email?: string;
     primary?: boolean;
+    emergencyContact?: boolean;
+    nextOfKin?: boolean;
+    hasHealthWelfareLpa?: boolean;
+    hasPropertyFinanceLpa?: boolean;
+    notes?: string;
   }>;
   risks: Array<{
     title: string;
@@ -175,10 +180,26 @@ export interface ResidentCareProfileDto {
   capacitySummary: string;
   consentSummary: string;
   dolsSummary: string;
+  capacityDecisions: Array<{ decision: string; outcome: "HAS_CAPACITY" | "LACKS_CAPACITY" | "NOT_ASSESSED"; supportProvided: string; assessor: string; assessedAt: string | null; reviewDueAt: string | null; bestInterestDecision: string }>;
+  consentRecords: Array<{ scope: string; status: "GIVEN" | "REFUSED" | "WITHDRAWN" | "REPRESENTATIVE" | "NOT_RECORDED"; givenBy: string; method: string; recordedAt: string | null; reviewDueAt: string | null; notes: string }>;
+  dols: { status: "NOT_REQUIRED" | "CONSIDERING" | "APPLIED" | "AUTHORISED" | "EXPIRED" | "REFUSED"; authorisingBody?: string; reference?: string; expiresAt?: string | null; conditions?: string; representative?: string };
+  dnacprRecordedAt: string | null;
+  dnacprDocumentLocation: string;
+  preferredLanguage: string;
+  religionCulture: string;
+  advocacySupport: string;
   lastReviewedAt: string | null;
   reviewDueAt: string | null;
   version: number;
   updatedAt: string | null;
+}
+
+export type ResidentAssessmentRisk = "NOT_RATED" | "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+export interface ResidentAssessmentDto {
+  id: string; residentId: string; type: string; title: string; purpose: string; status: "DRAFT" | "COMPLETED" | "ARCHIVED";
+  answers: Array<{ questionId: string; label: string; response: string; selectedOptions: string[]; notApplicable: boolean; notes: string }>;
+  risks: Array<{ title: string; level: ResidentAssessmentRisk; evidence: string; controls: string }>;
+  summary: string; overallRisk: ResidentAssessmentRisk; actionsRequired: string; assessedAt: string | null; reviewDueAt: string | null; version: number; updatedAt: string | null;
 }
 
 export interface QueryResidentsParams {
@@ -341,6 +362,7 @@ export interface PersonalHandoverDto {
   userId: string;
   staffName: string;
   shiftWindow: HandoverShiftWindow;
+  coverage: "DAY";
   dateKey: string;
   windowStart: string;
   windowEnd: string;
@@ -364,6 +386,7 @@ export interface HandoverSnapshotDto {
   windowStart: string;
   windowEnd: string;
   generatedAt: string;
+  generatedBy: { userId: string; name: string; role: string } | null;
   careHomeSummary: {
     residentsMonitored: number;
     residentsRequiringAttention: number;
