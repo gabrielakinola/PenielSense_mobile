@@ -4,3 +4,4 @@ export interface MedicationAdministration { _id:string; orderId:string; resident
 export interface MedicationSlot { slotKey:string; scheduledAt:string; order:MedicationOrder; administration:MedicationAdministration|null }
 export interface MedicationRounds { date:string; slots:MedicationSlot[]; prnOrders:MedicationOrder[]; administrations:MedicationAdministration[] }
 export interface MedicationWitness { id:string; firstName:string; lastName:string; role:string }
+export interface MedicationStockMovement { _id:string; orderId:string; quantity:number; change:number; reason:string; recordedBy:string; createdAt:string }
