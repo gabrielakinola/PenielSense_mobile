@@ -1,9 +1,11 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Alert,
   FlatList,
+  Image,
   Modal,
   Pressable,
+  ScrollView,
   Text,
   TextInput,
   View,
@@ -22,6 +24,7 @@ import { Card } from "@/src/components/ui/Card";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import {
   getMedicationRounds,
+  getResidentMedicationHistory,
   getMedicationStock,
   getMedicationWitnesses,
   recordMedicationAdministration,
@@ -33,6 +36,8 @@ import { typography } from "@/src/theme/typography";
 import { radius } from "@/src/theme/radius";
 import type { MedicationOutcome, MedicationSlot } from "@/src/types/emar.types";
 import { useAuthStore } from "@/src/stores/auth-store";
+import { BodyMap, type BodyMapMarkValue } from "@/src/components/incidents/BodyMap";
+import type { ApiResidentDto } from "@/src/types/carehome.types";
 
 const dateKey = () => {
   const d = new Date();
@@ -43,6 +48,7 @@ export default function MedicationScreen() {
   const qc = useQueryClient();
   const userId = useAuthStore((s) => s.user?.id);
   const [selected, setSelected] = useState<MedicationSlot | null>(null);
+  const [slotChoices, setSlotChoices] = useState<MedicationSlot[]>([]);
   const [sortBy, setSortBy] = useState<"room" | "name">("room");
   const rounds = useQuery({
     queryKey: ["emar", "rounds", dateKey()],
@@ -117,7 +123,7 @@ export default function MedicationScreen() {
               }
             />
           }
-          renderItem={({ item }) => <ResidentMedicationCard row={item} onSelect={setSelected} />}
+          renderItem={({ item }) => <ResidentMedicationCard row={item} onSelect={(slots) => setSlotChoices(slots)} />}
           ListFooterComponent={
             rounds.data?.prnOrders.length ? (
               <View style={{ marginTop: 6 }}>
@@ -194,18 +200,33 @@ export default function MedicationScreen() {
           }}
         />
       ) : null}
+      {slotChoices.length ? (
+        <RoundSlotPicker
+          slots={slotChoices}
+          close={() => setSlotChoices([])}
+          select={(slot) => {
+            setSlotChoices([]);
+            setSelected(slot);
+          }}
+        />
+      ) : null}
     </View>
   );
 }
 
-function ResidentMedicationCard({ row, onSelect }: { row: { resident?: { fullName: string; preferredName?: string | null; roomNo: string }; slots: MedicationSlot[] }; onSelect: (slot: MedicationSlot) => void }) {
+function ResidentMedicationCard({ row, onSelect }: { row: { resident?: ApiResidentDto; slots: MedicationSlot[] }; onSelect: (slots: MedicationSlot[]) => void }) {
   const colors = useThemeColors();
   const periods = ['Morning', 'Midday', 'Evening', 'Night'] as const;
   const period = (iso: string) => { const hour = Number(iso.slice(11, 13)); return hour < 11 ? 'Morning' : hour < 15 ? 'Midday' : hour < 20 ? 'Evening' : 'Night'; };
   return <Card style={{ marginBottom: 12 }}>
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}><View style={{ width: 46, height: 46, borderRadius: 23, backgroundColor: '#E8ECFF', alignItems: 'center', justifyContent: 'center' }}><Text style={{ ...typography.heading, color: colors.primary }}>{(row.resident?.preferredName || row.resident?.fullName || 'R').slice(0, 1)}</Text></View><View><Text style={{ ...typography.heading, color: colors.text }}>{row.resident?.preferredName || row.resident?.fullName || 'Resident'}</Text><Text style={{ ...typography.caption, color: colors.secondary }}>Room {row.resident?.roomNo || '—'}</Text></View></View>
-    <View style={{ flexDirection: 'row', gap: 6, marginTop: 13 }}>{periods.map((label) => { const slots = row.slots.filter((x) => period(x.scheduledAt) === label); const done = slots.filter((x) => x.administration && !x.administration.voided).length; const late = slots.some((x) => !x.administration && new Date(x.scheduledAt).getTime() < Date.now() - 60 * 60 * 1000); const next = slots.find((x) => !x.administration); const tint = !slots.length ? colors.secondary : done === slots.length ? colors.status.good : late ? '#E5484D' : colors.primary; return <Pressable key={label} disabled={!next} onPress={() => next && onSelect(next)} accessibilityLabel={`${label}, ${done} of ${slots.length} given`} style={{ flex: 1, minHeight: 65, borderRadius: radius.md, backgroundColor: !slots.length ? colors.surfaceElevated : `${tint}12`, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 2 }}>{done === slots.length && slots.length ? <CheckCircle2 size={18} color={tint} /> : <Clock3 size={18} color={tint} />}<Text style={{ ...typography.label, color: tint, marginTop: 3 }}>{slots.length ? `${done}/${slots.length}` : '—'}</Text><Text numberOfLines={1} style={{ fontSize: 10, color: colors.secondary }}>{label}</Text></Pressable>; })}</View>
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}><View style={{ width: 46, height: 46, borderRadius: 23, overflow:'hidden', backgroundColor: '#E8ECFF', alignItems: 'center', justifyContent: 'center' }}>{row.resident?.photoUrl ? <Image source={{ uri: row.resident.photoUrl }} style={{ width:'100%',height:'100%' }} /> : <Text style={{ ...typography.heading, color: colors.primary }}>{(row.resident?.preferredName || row.resident?.fullName || 'R').slice(0, 1)}</Text>}</View><View><Text style={{ ...typography.heading, color: colors.text }}>{row.resident?.preferredName || row.resident?.fullName || 'Resident'}</Text><Text style={{ ...typography.caption, color: colors.secondary }}>Room {row.resident?.roomNo || '—'}</Text></View></View>
+    <View style={{ flexDirection: 'row', gap: 6, marginTop: 13 }}>{periods.map((label) => { const slots = row.slots.filter((x) => period(x.scheduledAt) === label); const done = slots.filter((x) => x.administration && !x.administration.voided).length; const late = slots.some((x) => !x.administration && new Date(x.scheduledAt).getTime() < Date.now() - 60 * 60 * 1000); const tint = !slots.length ? colors.secondary : done === slots.length ? colors.status.good : late ? '#E5484D' : colors.primary; const times=slots.map(x=>x.scheduledAt.slice(11,16)).join(', '); return <Pressable key={label} disabled={!slots.length} onPress={() => onSelect(slots)} accessibilityLabel={`${label}, ${done} of ${slots.length} recorded`} style={{ flex: 1, minHeight: 76, borderRadius: radius.md, backgroundColor: !slots.length ? colors.surfaceElevated : `${tint}12`, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 2 }}>{done === slots.length && slots.length ? <CheckCircle2 size={18} color={tint} /> : <Clock3 size={18} color={tint} />}<Text style={{ ...typography.label, color: tint, marginTop: 3 }}>{slots.length ? `${done}/${slots.length}` : '—'}</Text><Text numberOfLines={1} style={{ fontSize: 10, color: colors.secondary }}>{label}</Text>{times?<Text numberOfLines={1} style={{fontSize:9,color:colors.secondary}}>{times}</Text>:null}</Pressable>; })}</View>
   </Card>;
+}
+
+function RoundSlotPicker({slots,close,select}:{slots:MedicationSlot[];close:()=>void;select:(slot:MedicationSlot)=>void}){
+  const colors=useThemeColors();
+  return <Modal transparent animationType="slide" onRequestClose={close}><View style={{flex:1,justifyContent:'flex-end',backgroundColor:'rgba(15,23,42,.35)'}}><View style={{maxHeight:'70%',backgroundColor:colors.background,borderTopLeftRadius:24,borderTopRightRadius:24,padding:20}}><View style={{flexDirection:'row',justifyContent:'space-between',alignItems:'center'}}><Text style={{...typography.heading,color:colors.text}}>Medicines in this round ({slots.length})</Text><Pressable onPress={close}><Text style={{...typography.label,color:colors.primary}}>Close</Text></Pressable></View><ScrollView style={{marginTop:12}}>{slots.map(slot=><Pressable key={slot.slotKey} disabled={!!slot.administration&&!slot.administration.voided} onPress={()=>select(slot)} style={{padding:14,borderWidth:1,borderColor:colors.border,borderRadius:radius.md,marginBottom:8,opacity:slot.administration&&!slot.administration.voided?0.6:1}}><Text style={{...typography.bodyMedium,color:colors.text}}>{slot.order.medicineName} · {slot.order.dose}</Text><Text style={{...typography.caption,color:colors.secondary,marginTop:3}}>Scheduled {slot.scheduledAt.slice(11,16)} · {slot.order.route}</Text><Text style={{...typography.label,color:slot.administration?colors.status.good:colors.primary,marginTop:6}}>{slot.administration?slot.administration.outcome.replaceAll('_',' '):'Open medication record'}</Text></Pressable>)}</ScrollView></View></View></Modal>
 }
 
 function OutcomeModal({
@@ -228,17 +249,39 @@ function OutcomeModal({
   );
   const [note, setNote] = useState("");
   const [witness, setWitness] = useState("");
+  const [stockBeforeInput, setStockBeforeInput] = useState("");
+  const [quantityInput, setQuantityInput] = useState("1");
+  const [actualTime, setActualTime] = useState(() => new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false }));
+  const [applicationMark, setApplicationMark] = useState<BodyMapMarkValue | null>(null);
+  const [bodyView, setBodyView] = useState<"FRONT" | "BACK">("FRONT");
   const stock = useQuery({ queryKey: ["emar", "stock", slot.order._id], queryFn: () => getMedicationStock(slot.order._id) });
+  const history = useQuery({ queryKey: ["emar", "history", slot.order.residentId], queryFn: () => getResidentMedicationHistory(slot.order.residentId) });
   const stockBefore = stock.data?.[0]?.quantity;
+  useEffect(() => { if (stockBefore !== undefined && !stockBeforeInput) setStockBeforeInput(String(stockBefore)); }, [stockBefore, stockBeforeInput]);
+  const removesStock = outcome === "GIVEN" || outcome === "PRN_GIVEN" || outcome === "DESTROYED";
+  const stockBeforeNumber = stockBeforeInput.trim() === "" ? undefined : Number(stockBeforeInput);
+  const quantityUsed = removesStock ? Number(quantityInput) : 0;
+  const estimatedAfter = stockBeforeNumber === undefined || Number.isNaN(quantityUsed) ? undefined : stockBeforeNumber - quantityUsed;
+  const topical = /cream|ointment|gel|lotion|topical|cutaneous/i.test(`${slot.order.medicineName} ${slot.order.route}`);
+  const previousRecords = (history.data ?? []).filter((item) => item.orderId === slot.order._id).slice(0, 5);
+  const administeredAt = () => {
+    if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(actualTime)) return undefined;
+    const now = new Date(); const [hours, minutes] = actualTime.split(":").map(Number);
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes).toISOString();
+  };
   const mutation = useMutation({
     mutationFn: () =>
       recordMedicationAdministration(slot.order._id, {
         slotKey: slot.slotKey,
         scheduledAt: slot.scheduledAt,
+        administeredAt: administeredAt(),
         outcome,
         reason,
         note,
         witnessUserId: witness || undefined,
+        stockBefore: stockBeforeNumber,
+        quantityUsed,
+        applicationSite: applicationMark ? { view: applicationMark.view, x: applicationMark.x, y: applicationMark.y, label: "Application site" } : undefined,
       }),
     onSuccess: saved,
     onError: (e) =>
@@ -253,12 +296,13 @@ function OutcomeModal({
           backgroundColor: "rgba(15,23,42,.35)",
         }}
       >
-        <View
+        <ScrollView
           style={{
             backgroundColor: colors.background,
             borderTopLeftRadius: 24,
             borderTopRightRadius: 24,
             padding: 20,
+            maxHeight: "92%",
           }}
         >
           <Text style={{ ...typography.heading, color: colors.text }}>
@@ -271,9 +315,11 @@ function OutcomeModal({
               marginTop: 3,
             }}
           >
-            This creates a permanent MAR record.
+            Scheduled {slot.scheduledAt.slice(11, 16)}. This creates a permanent MAR record.
           </Text>
-          <View style={{ flexDirection: "row", gap: 8, marginTop: 12, padding: 12, borderRadius: radius.md, backgroundColor: colors.surfaceElevated }}><View style={{ flex: 1 }}><Text style={{ ...typography.caption, color: colors.secondary }}>Stock before</Text><Text style={{ ...typography.bodyMedium, color: colors.text }}>{stockBefore ?? "Not counted"}</Text></View><View style={{ flex: 1 }}><Text style={{ ...typography.caption, color: colors.secondary }}>Estimated after</Text><Text style={{ ...typography.bodyMedium, color: colors.text }}>{typeof stockBefore === "number" && outcome === "GIVEN" ? stockBefore - 1 : stockBefore ?? "—"}</Text></View></View>
+          <Text style={{...typography.label,color:colors.secondary,marginTop:14}}>TIME ACTUALLY GIVEN (24-HOUR)</Text>
+          <TextInput value={actualTime} onChangeText={setActualTime} keyboardType="numbers-and-punctuation" placeholder="HH:MM" placeholderTextColor={colors.secondary} style={{marginTop:6,borderWidth:1,borderColor:colors.border,borderRadius:radius.md,padding:12,color:colors.text}} />
+          <View style={{ flexDirection: "row", gap: 8, marginTop: 12, padding: 12, borderRadius: radius.md, backgroundColor: colors.surfaceElevated }}><View style={{ flex: 1 }}><Text style={{ ...typography.caption, color: colors.secondary }}>Stock before</Text><TextInput value={stockBeforeInput} onChangeText={setStockBeforeInput} keyboardType="decimal-pad" placeholder="Enter count" placeholderTextColor={colors.secondary} style={{...typography.bodyMedium,color:colors.text,borderBottomWidth:1,borderBottomColor:colors.border,paddingVertical:4}} /></View><View style={{ flex: 1 }}><Text style={{ ...typography.caption, color: colors.secondary }}>Quantity removed</Text><TextInput value={quantityInput} onChangeText={setQuantityInput} editable={removesStock} keyboardType="decimal-pad" style={{...typography.bodyMedium,color:colors.text,borderBottomWidth:1,borderBottomColor:colors.border,paddingVertical:4,opacity:removesStock?1:0.5}} /></View><View style={{ flex: 1 }}><Text style={{ ...typography.caption, color: colors.secondary }}>Estimated after</Text><Text style={{ ...typography.bodyMedium, color: colors.text,marginTop:5 }}>{estimatedAfter ?? "—"}</Text></View></View>
           {slot.order.prn ? (
             <View
               style={{
@@ -307,6 +353,7 @@ function OutcomeModal({
                   "REFUSED",
                   "OMITTED",
                   "NOT_AVAILABLE",
+                  "DESTROYED",
                 ] as MedicationOutcome[]
               ).map((x) => (
                 <Pressable
@@ -353,6 +400,7 @@ function OutcomeModal({
               }}
             />
           ) : null}
+          {topical && (outcome === "GIVEN" || outcome === "PRN_GIVEN") ? <View style={{marginTop:14}}><Text style={{...typography.heading,color:colors.text}}>Where was it applied?</Text><Text style={{...typography.caption,color:colors.secondary,marginTop:3}}>Tap the front or back body guide to record the application site.</Text><View style={{flexDirection:'row',gap:8,marginTop:10}}>{(['FRONT','BACK'] as const).map(view=><Pressable key={view} onPress={()=>setBodyView(view)} style={{paddingHorizontal:14,paddingVertical:8,borderRadius:radius.full,backgroundColor:bodyView===view?colors.primary:colors.surfaceElevated}}><Text style={{...typography.label,color:bodyView===view?'#FFF':colors.secondary}}>{view==='FRONT'?'Front':'Back'}</Text></Pressable>)}</View><BodyMap view={bodyView} marks={applicationMark?[applicationMark]:[]} onAddMark={(x,y)=>setApplicationMark({view:bodyView,x,y,type:'TOPICAL_APPLICATION'})} onRemoveMark={()=>setApplicationMark(null)} width={170}/></View>:null}
           <TextInput
             placeholder={
               slot.order.prn
@@ -404,6 +452,7 @@ function OutcomeModal({
               ))}
             </View>
           ) : null}
+          <View style={{marginTop:18}}><Text style={{...typography.heading,color:colors.text}}>Previous records</Text><Text style={{...typography.caption,color:colors.secondary,marginTop:3}}>Read-only history for this medicine to help check the last count and administration.</Text>{previousRecords.length?previousRecords.map(item=><View key={item._id} style={{marginTop:8,padding:10,borderWidth:1,borderColor:colors.border,borderRadius:radius.md}}><Text style={{...typography.bodyMedium,color:colors.text}}>{item.outcome.replaceAll('_',' ')}</Text><Text style={{...typography.caption,color:colors.secondary,marginTop:2}}>{new Date(item.administeredAt??item.recordedAt).toLocaleString()} · {item.recordedByName??'Staff member'}</Text><Text style={{...typography.caption,color:colors.secondary}}>Stock {item.stockBefore??'—'} → {item.stockAfter??'—'}{item.voided?' · VOIDED':''}</Text></View>):<Text style={{...typography.caption,color:colors.secondary,marginTop:8}}>No previous administrations recorded for this medicine.</Text>}</View>
           <View style={{ flexDirection: "row", gap: 10, marginTop: 16 }}>
             <Pressable
               onPress={close}
@@ -424,6 +473,10 @@ function OutcomeModal({
               disabled={
                 mutation.isPending ||
                 (!slot.order.prn && outcome !== "GIVEN" && !reason.trim()) ||
+                !administeredAt() ||
+                stockBeforeNumber === undefined || Number.isNaN(stockBeforeNumber) ||
+                Number.isNaN(quantityUsed) || quantityUsed < 0 || (estimatedAfter !== undefined && estimatedAfter < 0) ||
+                (topical && (outcome === "GIVEN" || outcome === "PRN_GIVEN") && !applicationMark) ||
                 (slot.order.controlledDrug && !witness)
               }
               onPress={() => mutation.mutate()}
@@ -442,7 +495,7 @@ function OutcomeModal({
               </Text>
             </Pressable>
           </View>
-        </View>
+        </ScrollView>
       </View>
     </Modal>
   );
