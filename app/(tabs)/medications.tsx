@@ -12,6 +12,9 @@ import {
 } from "react-native";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
   CheckCircle2,
   Clock3,
   Pill,
@@ -39,10 +42,11 @@ import { useAuthStore } from "@/src/stores/auth-store";
 import { BodyMap, type BodyMapMarkValue } from "@/src/components/incidents/BodyMap";
 import type { ApiResidentDto } from "@/src/types/carehome.types";
 
-const dateKey = () => {
-  const d = new Date();
+const dateKey = (d = new Date()) => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 };
+const parseDateKey = (value: string) => new Date(`${value}T12:00:00`);
+const shiftDate = (value: string, days: number) => { const date = parseDateKey(value); date.setDate(date.getDate() + days); return dateKey(date); };
 export default function MedicationScreen() {
   const colors = useThemeColors();
   const qc = useQueryClient();
@@ -50,9 +54,11 @@ export default function MedicationScreen() {
   const [selected, setSelected] = useState<MedicationSlot | null>(null);
   const [slotChoices, setSlotChoices] = useState<MedicationSlot[]>([]);
   const [sortBy, setSortBy] = useState<"room" | "name">("room");
+  const [selectedDate, setSelectedDate] = useState(dateKey());
+  const [calendarOpen, setCalendarOpen] = useState(false);
   const rounds = useQuery({
-    queryKey: ["emar", "rounds", dateKey()],
-    queryFn: () => getMedicationRounds(dateKey()),
+    queryKey: ["emar", "rounds", selectedDate],
+    queryFn: () => getMedicationRounds(selectedDate),
   });
   const residents = useQuery({
     queryKey: ["carehome", "residents", "emar"],
@@ -90,8 +96,13 @@ export default function MedicationScreen() {
           ListHeaderComponent={
             <View style={{ marginBottom: 14 }}>
               <Text style={{ ...typography.title, color: colors.text }}>
-                Today’s rounds
+                {selectedDate === dateKey() ? "Today’s rounds" : `Medication rounds · ${parseDateKey(selectedDate).toLocaleDateString([], { weekday: "short", day: "numeric", month: "short" })}`}
               </Text>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 12 }}>
+                <Pressable onPress={() => setSelectedDate((date) => shiftDate(date, -1))} accessibilityLabel="Previous day" style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: colors.border, borderRadius: radius.md }}><ChevronLeft size={20} color={colors.text}/></Pressable>
+                <Pressable onPress={() => setCalendarOpen(true)} style={{ flex: 1, minHeight: 44, flexDirection: "row", gap: 8, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: colors.border, borderRadius: radius.md }}><CalendarDays size={18} color={colors.primary}/><Text style={{ ...typography.bodyMedium, color: colors.text }}>{parseDateKey(selectedDate).toLocaleDateString([], { day: "numeric", month: "short", year: "numeric" })}</Text></Pressable>
+                <Pressable onPress={() => setSelectedDate((date) => shiftDate(date, 1))} accessibilityLabel="Next day" style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: colors.border, borderRadius: radius.md }}><ChevronRight size={20} color={colors.text}/></Pressable>
+              </View>
               <View
                 style={{
                   flexDirection: "row",
@@ -210,6 +221,7 @@ export default function MedicationScreen() {
           }}
         />
       ) : null}
+      {calendarOpen ? <MedicationCalendar value={selectedDate} close={() => setCalendarOpen(false)} select={(date) => { setSelectedDate(date); setCalendarOpen(false); }} /> : null}
     </View>
   );
 }
@@ -266,8 +278,8 @@ function OutcomeModal({
   const previousRecords = (history.data ?? []).filter((item) => item.orderId === slot.order._id).slice(0, 5);
   const administeredAt = () => {
     if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(actualTime)) return undefined;
-    const now = new Date(); const [hours, minutes] = actualTime.split(":").map(Number);
-    return new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes).toISOString();
+    const scheduledDay = new Date(slot.scheduledAt); const [hours, minutes] = actualTime.split(":").map(Number);
+    return new Date(scheduledDay.getFullYear(), scheduledDay.getMonth(), scheduledDay.getDate(), hours, minutes).toISOString();
   };
   const mutation = useMutation({
     mutationFn: () =>
@@ -499,4 +511,19 @@ function OutcomeModal({
       </View>
     </Modal>
   );
+}
+
+function MedicationCalendar({ value, close, select }: { value: string; close: () => void; select: (date: string) => void }) {
+  const colors = useThemeColors();
+  const [month, setMonth] = useState(() => { const date = parseDateKey(value); return new Date(date.getFullYear(), date.getMonth(), 1); });
+  const firstOffset = (month.getDay() + 6) % 7;
+  const totalDays = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
+  const cells = Array.from({ length: Math.ceil((firstOffset + totalDays) / 7) * 7 }, (_, index) => index - firstOffset + 1);
+  const moveMonth = (change: number) => setMonth((current) => new Date(current.getFullYear(), current.getMonth() + change, 1));
+  return <Modal transparent animationType="fade" onRequestClose={close}><View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 22, backgroundColor: "rgba(15,23,42,.45)" }}><View style={{ width: "100%", maxWidth: 390, backgroundColor: colors.background, padding: 18, borderRadius: 22 }}>
+    <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}><Pressable onPress={() => moveMonth(-1)} style={{ padding: 10 }}><ChevronLeft size={20} color={colors.text}/></Pressable><Text style={{ ...typography.heading, color: colors.text }}>{month.toLocaleDateString([], { month: "long", year: "numeric" })}</Text><Pressable onPress={() => moveMonth(1)} style={{ padding: 10 }}><ChevronRight size={20} color={colors.text}/></Pressable></View>
+    <View style={{ flexDirection: "row", marginTop: 10 }}>{["M","T","W","T","F","S","S"].map((day,index) => <Text key={`${day}-${index}`} style={{ width: "14.285%", textAlign: "center", ...typography.label, color: colors.secondary }}>{day}</Text>)}</View>
+    <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: 6 }}>{cells.map((day,index) => { if (day < 1 || day > totalDays) return <View key={`empty-${index}`} style={{ width: "14.285%", height: 44 }}/>; const date = new Date(month.getFullYear(), month.getMonth(), day); const key = dateKey(date); const selected = key === value; const today = key === dateKey(); return <Pressable key={key} onPress={() => select(key)} style={{ width: "14.285%", height: 44, alignItems: "center", justifyContent: "center" }}><View style={{ width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: selected ? colors.primary : "transparent", borderWidth: today && !selected ? 1 : 0, borderColor: colors.primary }}><Text style={{ ...typography.body, color: selected ? "#FFF" : colors.text }}>{day}</Text></View></Pressable>; })}</View>
+    <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 12 }}><Pressable onPress={close} style={{ padding: 10 }}><Text style={{ ...typography.label, color: colors.secondary }}>Cancel</Text></Pressable><Pressable onPress={() => select(dateKey())} style={{ padding: 10 }}><Text style={{ ...typography.label, color: colors.primary }}>Today</Text></Pressable></View>
+  </View></View></Modal>;
 }

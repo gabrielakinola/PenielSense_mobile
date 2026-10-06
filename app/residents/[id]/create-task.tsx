@@ -15,8 +15,13 @@ import { ResidentWorkspaceHeader } from "@/src/components/residents/ResidentWork
 
 const categories = [
   "PERSONAL_CARE",
+  "SHOWER_BATHING",
+  "ORAL_CARE",
+  "DRESSING",
   "CONTINENCE",
   "MOBILITY",
+  "EXERCISE",
+  "ENTERTAINMENT",
   "NUTRITION_HYDRATION",
   "COMMUNICATION",
   "SKIN_INTEGRITY",

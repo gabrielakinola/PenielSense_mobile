@@ -1,14 +1,15 @@
 import { useMemo, useState } from "react";
-import { Alert, FlatList, Pressable, RefreshControl, Text, View } from "react-native";
+import { Alert, FlatList, Image, Modal, Pressable, RefreshControl, ScrollView, Text, TextInput, View } from "react-native";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
-import { CalendarDays, Check, ChevronRight, ClipboardCheck, Clock3, Users } from "lucide-react-native";
+import { Check, ChevronRight, ClipboardCheck, Users } from "lucide-react-native";
 import { ScreenHeader } from "@/src/components/ui/ScreenHeader";
 import { ScreenContainer } from "@/src/components/ui/ScreenContainer";
 import { Card } from "@/src/components/ui/Card";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { PageIntro } from "@/src/components/ui/PageIntro";
 import { getCareTasks, recordCareTaskOutcome } from "@/src/services/care-tasks.api";
+import { createCareEntry } from "@/src/services/care-entries.api";
 import { getOperationalRecords } from "@/src/services/operational-records.api";
 import { getCareHomeResidents } from "@/src/services/residents.api";
 import { normalizeApiError } from "@/src/lib/api-client";
@@ -17,6 +18,8 @@ import { typography } from "@/src/theme/typography";
 import { radius } from "@/src/theme/radius";
 import type { CareTaskDto, CareTaskStatus } from "@/src/types/care-task.types";
 import type { OperationalRecordDto } from "@/src/types/operational-record.types";
+import type { ApiResidentDto } from "@/src/types/carehome.types";
+import type { CareEntryCategory } from "@/src/types/care-entry.types";
 
 function upcomingWindow() {
   const from = new Date();
@@ -47,6 +50,7 @@ export default function TasksScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<CareTaskDto | null>(null);
   const window = useMemo(upcomingWindow, []);
   const tasksQuery = useQuery({
     queryKey: ["carehome", "care-tasks", "upcoming"],
@@ -65,16 +69,10 @@ export default function TasksScreen() {
     queryKey: ["carehome", "residents", "task-names"],
     queryFn: () => getCareHomeResidents(),
   });
-  const names = useMemo(
-    () => new Map((residentsQuery.data ?? []).map((resident) => [resident.id, resident.preferredName || resident.fullName])),
+  const residentById = useMemo(
+    () => new Map((residentsQuery.data ?? []).map((resident) => [resident.id, resident])),
     [residentsQuery.data],
   );
-  const mutation = useMutation({
-    mutationFn: ({ task, status }: { task: CareTaskDto; status: Exclude<CareTaskStatus, "PENDING"> }) =>
-      recordCareTaskOutcome(task.id, status),
-    onSuccess: async () => queryClient.invalidateQueries({ queryKey: ["carehome", "care-tasks"] }),
-    onError: (error) => Alert.alert("Could not record care", normalizeApiError(error)),
-  });
   const items = useMemo<WorkItem[]>(() => {
     const tasks = (tasksQuery.data ?? []).map((task) => ({
       kind: "task" as const,
@@ -93,15 +91,6 @@ export default function TasksScreen() {
     return [...tasks, ...appointments].sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime());
   }, [appointmentsQuery.data, tasksQuery.data]);
   const outstanding = (tasksQuery.data ?? []).filter((task) => task.status === "PENDING").length;
-
-  const chooseOutcome = (task: CareTaskDto) =>
-    Alert.alert("Record care outcome", task.title, [
-      { text: "Completed", onPress: () => mutation.mutate({ task, status: "COMPLETED" }) },
-      { text: "Partly completed", onPress: () => mutation.mutate({ task, status: "PARTIAL" }) },
-      { text: "Declined", onPress: () => mutation.mutate({ task, status: "DECLINED" }) },
-      { text: "Unable / escalate", onPress: () => mutation.mutate({ task, status: "ESCALATED" }) },
-      { text: "Cancel", style: "cancel" },
-    ]);
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -152,20 +141,20 @@ export default function TasksScreen() {
                   ? colors.status.watch
                   : colors.primary;
             return (
-              <Card style={{ marginBottom: 12, borderLeftWidth: 3, borderLeftColor: accent }}>
-                <Pressable onPress={() => router.push(`/residents/${item.residentId}`)} style={{ flexDirection: "row", gap: 12 }}>
-                  <View style={{ width: 38, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center", backgroundColor: appointment ? "#EFEDFF" : colors.surfaceElevated }}>
-                    {appointment ? <CalendarDays size={19} color={accent} /> : <ClipboardCheck size={19} color={accent} />}
-                  </View>
+              <Card style={{ marginBottom: 12, padding: 0, overflow: "hidden", borderLeftWidth: 4, borderLeftColor: accent }}>
+                <View style={{ flexDirection: "row", gap: 12, padding: 14 }}>
+                  <ResidentAvatar resident={residentById.get(item.residentId)} onPress={() => router.push(`/residents/${item.residentId}`)} />
+                  <Pressable onPress={() => task ? setSelectedTask(task) : router.push(`/residents/${item.residentId}`)} style={{ flex: 1, flexDirection: "row" }}>
                   <View style={{ flex: 1 }}>
-                    <Text style={{ ...typography.label, color: colors.secondary }}>
-                      {dayLabel(item.at)} · {new Date(item.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                    </Text>
+                    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
+                      <Text style={{ ...typography.label, color: accent }}>{task ? task.category.replaceAll("_", " ") : "APPOINTMENT"}</Text>
+                      {overdue ? <Text style={{ ...typography.label, color: colors.status.critical }}>OVERDUE</Text> : null}
+                    </View>
                     <Text style={{ ...typography.bodyMedium, color: colors.text, marginTop: 4 }}>
                       {appointment?.title ?? task?.title}
                     </Text>
                     <Text style={{ ...typography.caption, color: colors.secondary, marginTop: 3 }}>
-                      {names.get(item.residentId) ?? "Resident"}
+                      {residentById.get(item.residentId)?.preferredName || residentById.get(item.residentId)?.fullName || "Resident"} · {dayLabel(item.at)} at {new Date(item.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                     </Text>
                     <Text style={{ ...typography.caption, color: colors.text, marginTop: 5 }} numberOfLines={2}>
                       {appointment
@@ -178,27 +167,103 @@ export default function TasksScreen() {
                     </View>
                   </View>
                   <ChevronRight size={18} color={colors.secondary} />
-                </Pressable>
-                {task?.status === "PENDING" ? (
-                  <Pressable
-                    onPress={() => chooseOutcome(task)}
-                    disabled={mutation.isPending}
-                    style={{ marginTop: 14, minHeight: 44, borderRadius: radius.md, backgroundColor: colors.primary, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 7 }}
-                  >
-                    <Check size={18} color="#FFFFFF" />
-                    <Text style={{ ...typography.bodyMedium, color: "#FFFFFF" }}>Record outcome</Text>
                   </Pressable>
-                ) : task ? (
-                  <View style={{ marginTop: 12, flexDirection: "row", gap: 6, alignItems: "center" }}>
-                    <Clock3 size={15} color={colors.status.good} />
-                    <Text style={{ ...typography.caption, color: colors.status.good }}>{task.status.replace("_", " ")}</Text>
-                  </View>
-                ) : null}
+                </View>
               </Card>
             );
           }}
         />
       </ScreenContainer>
+      {selectedTask ? (
+        <TaskDetailModal
+          task={selectedTask}
+          resident={residentById.get(selectedTask.residentId)}
+          close={() => setSelectedTask(null)}
+          openResident={() => { const id = selectedTask.residentId; setSelectedTask(null); router.push(`/residents/${id}`); }}
+          saved={async () => {
+            setSelectedTask(null);
+            await Promise.all([
+              queryClient.invalidateQueries({ queryKey: ["carehome", "care-tasks"] }),
+              queryClient.invalidateQueries({ queryKey: ["carehome", "care-entries", selectedTask.residentId] }),
+            ]);
+          }}
+        />
+      ) : null}
     </View>
+  );
+}
+
+function ResidentAvatar({ resident, onPress }: { resident?: ApiResidentDto; onPress: () => void }) {
+  const colors = useThemeColors();
+  const name = resident?.preferredName || resident?.fullName || "Resident";
+  return (
+    <Pressable onPress={onPress} accessibilityLabel={`Open ${name}'s profile`} style={{ width: 58, alignItems: "center" }}>
+      <View style={{ width: 54, height: 54, borderRadius: 27, overflow: "hidden", backgroundColor: `${colors.primary}18`, alignItems: "center", justifyContent: "center" }}>
+        {resident?.photoUrl ? <Image source={{ uri: resident.photoUrl }} style={{ width: "100%", height: "100%" }} /> : <Text style={{ ...typography.heading, color: colors.primary }}>{name.slice(0, 1)}</Text>}
+      </View>
+      <Text numberOfLines={1} style={{ fontSize: 10, color: colors.primary, marginTop: 4 }}>Profile</Text>
+    </Pressable>
+  );
+}
+
+function timelineCategory(taskCategory: string): CareEntryCategory {
+  const map: Record<string, CareEntryCategory> = {
+    PERSONAL_CARE: "PERSONAL_CARE", SHOWER_BATHING: "SHOWER_BATHING", ORAL_CARE: "ORAL_CARE", DRESSING: "DRESSING",
+    CONTINENCE: "CONTINENCE", MOBILITY: "MOBILITY", EXERCISE: "EXERCISE", ENTERTAINMENT: "ENTERTAINMENT",
+    NUTRITION_HYDRATION: "FOOD", SLEEP: "SLEEP_REST", MEDICATION_SUPPORT: "MEDICATION_OBSERVATION",
+    EMOTIONAL_WELLBEING: "MOOD_BEHAVIOUR", SOCIAL_ACTIVITY: "ENTERTAINMENT",
+  };
+  return map[taskCategory] ?? "GENERAL_WELLBEING";
+}
+
+function TaskDetailModal({ task, resident, close, openResident, saved }: { task: CareTaskDto; resident?: ApiResidentDto; close: () => void; openResident: () => void; saved: () => Promise<void> }) {
+  const colors = useThemeColors();
+  const [status, setStatus] = useState<Exclude<CareTaskStatus, "PENDING">>("COMPLETED");
+  const [note, setNote] = useState("");
+  const mutation = useMutation({
+    mutationFn: async () => {
+      const wording = note.trim();
+      const outcome = await recordCareTaskOutcome(task.id, status, wording);
+      if (wording) {
+        await createCareEntry(task.residentId, {
+          rawText: `${task.title}: ${wording}`,
+          items: [{ category: timelineCategory(task.category), summary: wording.slice(0, 500) }],
+          extractedItems: [], observations: [], extractedObservations: [], usedOpenAI: false, model: null,
+          handoverRequired: status !== "COMPLETED",
+          requiresExtractionOnSync: true,
+        });
+      }
+      return outcome;
+    },
+    onSuccess: saved,
+    onError: (error) => Alert.alert("Could not record task", normalizeApiError(error)),
+  });
+  const name = resident?.preferredName || resident?.fullName || "Resident";
+  return (
+    <Modal transparent animationType="slide" onRequestClose={close}>
+      <View style={{ flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(15,23,42,.42)" }}>
+        <ScrollView keyboardShouldPersistTaps="handled" style={{ maxHeight: "88%", backgroundColor: colors.background, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20 }}>
+          <View style={{ flexDirection: "row", gap: 12, alignItems: "center" }}>
+            <ResidentAvatar resident={resident} onPress={openResident} />
+            <View style={{ flex: 1 }}><Text style={{ ...typography.heading, color: colors.text }}>{task.title}</Text><Text style={{ ...typography.caption, color: colors.secondary, marginTop: 3 }}>{name} · Room {resident?.roomNo || "—"}</Text></View>
+            <Pressable onPress={close}><Text style={{ ...typography.label, color: colors.primary }}>Close</Text></Pressable>
+          </View>
+          <View style={{ marginTop: 18, padding: 14, backgroundColor: colors.surfaceElevated, borderRadius: radius.md }}>
+            <Text style={{ ...typography.label, color: colors.primary }}>{task.category.replaceAll("_", " ")}</Text>
+            <Text style={{ ...typography.body, color: colors.text, marginTop: 7 }}>{task.instructions}</Text>
+            <Text style={{ ...typography.caption, color: colors.secondary, marginTop: 8 }}>Due {new Date(task.dueAt).toLocaleString()} · {task.recurrence === "DAILY" ? "Repeats daily" : "One-off"}</Text>
+          </View>
+          {task.status === "PENDING" ? <>
+            <Text style={{ ...typography.label, color: colors.secondary, marginTop: 18 }}>OUTCOME</Text>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 8 }}>{([['COMPLETED','Completed'],['PARTIAL','Partly completed'],['DECLINED','Declined'],['ESCALATED','Unable / escalate']] as const).map(([value,label]) => <Pressable key={value} onPress={() => setStatus(value)} style={{ paddingHorizontal: 12, paddingVertical: 10, borderRadius: radius.md, borderWidth: 1, borderColor: status === value ? colors.primary : colors.border, backgroundColor: status === value ? `${colors.primary}14` : 'transparent' }}><Text style={{ ...typography.label, color: status === value ? colors.primary : colors.text }}>{label}</Text></Pressable>)}</View>
+            <Text style={{ ...typography.label, color: colors.secondary, marginTop: 18 }}>CARE NOTE (OPTIONAL)</Text>
+            <TextInput value={note} onChangeText={setNote} multiline placeholder="What was done, observed or declined?" placeholderTextColor={colors.secondary} style={{ minHeight: 110, marginTop: 7, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, padding: 12, color: colors.text, textAlignVertical: "top" }} />
+            <Text style={{ ...typography.caption, color: colors.secondary, marginTop: 6 }}>Your wording is saved with the task and, when supplied, categorized into the resident timeline in the background.</Text>
+            <Pressable disabled={mutation.isPending} onPress={() => mutation.mutate()} style={{ minHeight: 50, marginTop: 16, borderRadius: radius.md, backgroundColor: colors.primary, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 7, opacity: mutation.isPending ? .5 : 1 }}><Check size={18} color="#FFF"/><Text style={{ ...typography.bodyMedium, color: "#FFF" }}>{mutation.isPending ? "Saving…" : "Save task outcome"}</Text></Pressable>
+          </> : <View style={{ marginTop: 18 }}><Text style={{ ...typography.heading, color: colors.status.good }}>{task.status.replaceAll("_", " ")}</Text>{task.outcomeNote ? <Text style={{ ...typography.body, color: colors.text, marginTop: 8 }}>{task.outcomeNote}</Text> : null}<Text style={{ ...typography.caption, color: colors.secondary, marginTop: 6 }}>{task.completedAt ? new Date(task.completedAt).toLocaleString() : "Recorded"}</Text></View>}
+          <View style={{ height: 30 }} />
+        </ScrollView>
+      </View>
+    </Modal>
   );
 }

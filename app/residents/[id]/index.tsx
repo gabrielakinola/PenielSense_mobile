@@ -119,8 +119,12 @@ export default function ResidentDetailScreen() {
         };
       }),
     );
+    const taskNotesRecorded = new Set(
+      (notes.data?.items ?? []).map((note) => note.rawText.trim()),
+    );
     const t = (tasks.data ?? [])
       .filter((x) => x.status !== "PENDING")
+      .filter((x) => !x.outcomeNote || !taskNotesRecorded.has(`${x.title}: ${x.outcomeNote}`))
       .map((x) => ({
         id: `task-${x.id}`,
         at: x.completedAt ?? x.dueAt,
@@ -899,8 +903,13 @@ function timelineVisual(
 ) {
   const map = {
     PERSONAL_CARE: Bath,
+    SHOWER_BATHING: Bath,
+    ORAL_CARE: Smile,
+    DRESSING: HeartHandshake,
     CONTINENCE: Toilet,
     MOBILITY: Accessibility,
+    EXERCISE: Accessibility,
+    ENTERTAINMENT: Smile,
     FOOD: Utensils,
     FLUID: GlassWater,
     MOOD_BEHAVIOUR: Smile,

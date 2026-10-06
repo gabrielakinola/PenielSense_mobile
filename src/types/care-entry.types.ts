@@ -1,7 +1,12 @@
 export type CareEntryCategory =
   | "PERSONAL_CARE"
+  | "SHOWER_BATHING"
+  | "ORAL_CARE"
+  | "DRESSING"
   | "CONTINENCE"
   | "MOBILITY"
+  | "EXERCISE"
+  | "ENTERTAINMENT"
   | "FOOD"
   | "FLUID"
   | "MOOD_BEHAVIOUR"
@@ -15,8 +20,13 @@ export const CARE_ENTRY_CATEGORY_OPTIONS: {
   label: string;
 }[] = [
   { value: "PERSONAL_CARE", label: "Personal care" },
+  { value: "SHOWER_BATHING", label: "Shower / bathing" },
+  { value: "ORAL_CARE", label: "Oral care" },
+  { value: "DRESSING", label: "Dressing" },
   { value: "CONTINENCE", label: "Continence" },
   { value: "MOBILITY", label: "Mobility" },
+  { value: "EXERCISE", label: "Exercise" },
+  { value: "ENTERTAINMENT", label: "Entertainment / activity" },
   { value: "FOOD", label: "Food" },
   { value: "FLUID", label: "Fluid" },
   { value: "MOOD_BEHAVIOUR", label: "Mood / behaviour" },
