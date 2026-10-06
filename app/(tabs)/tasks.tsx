@@ -54,7 +54,7 @@ export default function TasksScreen() {
   const window = useMemo(upcomingWindow, []);
   const tasksQuery = useQuery({
     queryKey: ["carehome", "care-tasks", "upcoming"],
-    queryFn: () => getCareTasks(window),
+    queryFn: () => getCareTasks({ ...window, status: "PENDING" }),
   });
   const appointmentsQuery = useQuery({
     queryKey: ["carehome", "operational-records", "appointments", window],

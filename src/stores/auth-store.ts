@@ -3,7 +3,7 @@ import * as SecureStore from 'expo-secure-store';
 import { useEffect, useState } from 'react';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import { loginCareHome, refreshCareHomeSession } from '@/src/services/auth.api';
+import { loginCareHome, refreshCareHomeSession, switchCareHomeLocation } from '@/src/services/auth.api';
 import {
   setAccessToken,
   setUnauthorizedHandler,
@@ -12,6 +12,7 @@ import {
 import type {
   CareHomeSummaryDto,
   CareHomeUserDto,
+  CareHomeLocationDto,
 } from '@/src/types/auth.types';
 
 interface AuthState {
@@ -20,10 +21,12 @@ interface AuthState {
   refreshToken: string | null;
   user: CareHomeUserDto | null;
   careHome: CareHomeSummaryDto | null;
+  locations: CareHomeLocationDto[];
   secureHydrated: boolean;
   hydrateSecureSession: () => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  switchLocation: (careHomeId: string) => Promise<void>;
 }
 
 const ACCESS_TOKEN_KEY = 'peniel.access-token';
@@ -40,6 +43,7 @@ export const useAuthStore = create<AuthState>()(
       refreshToken: null,
       user: null,
       careHome: null,
+      locations: [],
       secureHydrated: false,
       hydrateSecureSession: async () => {
         try {
@@ -85,7 +89,17 @@ export const useAuthStore = create<AuthState>()(
           refreshToken: data.refreshToken,
           user: data.user,
           careHome: data.careHome,
+          locations: data.locations ?? [],
         });
+      },
+      switchLocation: async (careHomeId) => {
+        const data = await switchCareHomeLocation(careHomeId);
+        await Promise.all([
+          SecureStore.setItemAsync(ACCESS_TOKEN_KEY, data.accessToken, secureOptions),
+          SecureStore.setItemAsync(REFRESH_TOKEN_KEY, data.refreshToken, secureOptions),
+        ]);
+        setAccessToken(data.accessToken);
+        set((state) => ({ accessToken: data.accessToken, refreshToken: data.refreshToken, careHome: state.careHome ? { ...state.careHome, id: data.careHome.id, name: data.careHome.name, city: data.careHome.city } : null, locations: data.locations }));
       },
       logout: async () => {
         setAccessToken(null);
@@ -99,6 +113,7 @@ export const useAuthStore = create<AuthState>()(
           refreshToken: null,
           user: null,
           careHome: null,
+          locations: [],
         });
       },
     }),
@@ -109,6 +124,7 @@ export const useAuthStore = create<AuthState>()(
         isAuthenticated: state.isAuthenticated,
         user: state.user,
         careHome: state.careHome,
+        locations: state.locations,
       }),
     },
   ),

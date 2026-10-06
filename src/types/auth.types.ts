@@ -32,11 +32,14 @@ export interface CareHomeSummaryDto {
   packageName?: string;
 }
 
+export interface CareHomeLocationDto { id: string; name: string; locationCode?: string | null; city: string; status: string; active: boolean; }
+
 export interface CareHomeLoginData {
   accessToken: string;
   refreshToken: string;
   user: CareHomeUserDto;
   careHome: CareHomeSummaryDto;
+  locations?: CareHomeLocationDto[];
 }
 
 export interface ApiSuccessEnvelope<T> {

@@ -43,6 +43,8 @@ export default function ProfileScreen() {
   const logout = useAuthStore((s) => s.logout);
   const user = useAuthStore((s) => s.user);
   const careHome = useAuthStore((s) => s.careHome);
+  const locations = useAuthStore((s) => s.locations);
+  const switchLocation = useAuthStore((s) => s.switchLocation);
   const mode = useThemeStore((s) => s.mode);
   const setMode = useThemeStore((s) => s.setMode);
   const queryClient = useQueryClient();
@@ -106,6 +108,17 @@ export default function ProfileScreen() {
   const roleLabel = user?.role ?? 'Staff';
   const email = user?.email ?? '';
   const careHomeName = careHome?.name ?? 'Care home';
+  const chooseLocation = useCallback(() => {
+    if (locations.length < 2) return;
+    if (pendingSync > 0) {
+      Alert.alert('Sync before changing service', 'Wait for pending updates to sync so care records stay attached to the correct service.');
+      return;
+    }
+    Alert.alert('Choose service', 'Only services you are authorised to access are shown.', [
+      ...locations.filter((location) => location.id !== careHome?.id).map((location) => ({ text: `${location.name}${location.city ? ` · ${location.city}` : ''}`, onPress: () => void switchLocation(location.id).then(() => queryClient.clear()) })),
+      { text: 'Cancel', style: 'cancel' as const },
+    ]);
+  }, [locations, pendingSync, careHome?.id, switchLocation, queryClient]);
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -220,6 +233,7 @@ export default function ProfileScreen() {
               <Text style={{ ...typography.caption, color: colors.text, flex: 1 }}>
                 {careHomeName}
               </Text>
+              {locations.length > 1 ? <Text onPress={chooseLocation} style={{ ...typography.label, color: colors.primary }}>Change</Text> : null}
             </View>
           </View>
         </Animated.View>
