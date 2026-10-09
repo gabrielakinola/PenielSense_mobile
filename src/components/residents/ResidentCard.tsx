@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Image, Pressable, Text, View } from 'react-native';
 import Animated from 'react-native-reanimated';
-import { ChevronRight, Heart } from 'lucide-react-native';
+import { ChevronRight, Footprints, Heart, Moon, Thermometer, Waves } from 'lucide-react-native';
 import type {
   ApiResidentDto,
   ResidentIntelligenceBadge,
@@ -45,6 +45,7 @@ interface ResidentCardProps {
   badge?: ResidentIntelligenceBadge;
   index: number;
   onPress: () => void;
+  showMonitoring?: boolean;
 }
 
 const CARE_TAG_COLORS: Record<string, { background: string; text: string }> = {
@@ -73,6 +74,7 @@ export function ResidentCard({
   badge,
   index,
   onPress,
+  showMonitoring = false,
 }: ResidentCardProps) {
   const colors = useThemeColors();
   const theme = useResolvedTheme();
@@ -267,6 +269,29 @@ export function ResidentCard({
                     </Text>
                   ) : null}
                 </View>
+                {showMonitoring ? (
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      flexWrap: 'wrap',
+                      gap: 6,
+                      marginTop: 8,
+                    }}
+                  >
+                    {[
+                      { key: 'hr', Icon: Heart, value: resident.latestVital?.heartRate ? `${resident.latestVital.heartRate} bpm` : 'No HR', color: colors.status.critical },
+                      { key: 'spo2', Icon: Waves, value: resident.latestVital?.spo2 ? `${resident.latestVital.spo2}% O₂` : 'No O₂', color: colors.primary },
+                      { key: 'temp', Icon: Thermometer, value: resident.latestVital?.skinTemperature ? `${resident.latestVital.skinTemperature}°C` : 'No temp', color: colors.status.watch },
+                      { key: 'sleep', Icon: Moon, value: resident.latestSleepScore != null ? `Sleep ${resident.latestSleepScore}` : 'No sleep', color: '#7C3AED' },
+                      { key: 'steps', Icon: Footprints, value: resident.activitySteps != null ? `${resident.activitySteps} steps` : 'No steps', color: colors.status.good },
+                    ].map(({ key, Icon, value, color }) => (
+                      <View key={key} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: radius.full, backgroundColor: `${color}12`, paddingHorizontal: 7, paddingVertical: 4 }}>
+                        <Icon size={11} color={color} />
+                        <Text style={{ ...typography.label, color }}>{value}</Text>
+                      </View>
+                    ))}
+                  </View>
+                ) : null}
               </View>
               <ChevronRight size={18} color={colors.secondary} />
             </View>

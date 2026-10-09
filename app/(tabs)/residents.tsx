@@ -272,6 +272,7 @@ export default function ResidentsScreen() {
                 resident={item}
                 badge={badgeById.get(item.id)}
                 index={index}
+                showMonitoring={hasSense}
                 onPress={() => router.push(`/residents/${item.id}`)}
               />
             )}

@@ -54,6 +54,7 @@ export function availableProductTabs(
     if (manager) tabs.add('index');
   }
   if (products.includes('PENIEL_EMAR')) {
+    tabs.add('residents');
     tabs.add('medications');
   }
 
@@ -70,4 +71,3 @@ export function productLandingTab(
   if (tabs.has('medications')) return '/(tabs)/medications';
   return '/(tabs)/profile';
 }
-

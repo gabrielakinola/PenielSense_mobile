@@ -71,7 +71,9 @@ export default function ResidentDetailScreen() {
     hasSense ||
     careHome?.subscriptionPackage === "CARE_INTELLIGENCE" ||
     careHome?.featureOverrides?.intelligence === true;
-  const [tab, setTab] = useState<"timeline" | "about">("timeline");
+  const [tab, setTab] = useState<"timeline" | "about">(
+    hasCare || hasIntelligence ? "timeline" : "about",
+  );
   const [filter, setFilter] = useState<CareEntryCategory | "ALL">("ALL");
   const [actions, setActions] = useState(false);
   const [showWhy, setShowWhy] = useState(false);
