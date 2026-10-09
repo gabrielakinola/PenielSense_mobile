@@ -1,6 +1,35 @@
-import { Stack } from 'expo-router';
+import { useEffect } from 'react';
+import { Stack, usePathname, useRouter } from 'expo-router';
+import { useAuthStore } from '@/src/stores/auth-store';
+import { isCareHomeManagerRole } from '@/src/lib/care-home-home';
+import { hasProduct, productLandingTab } from '@/src/lib/product-access';
 
 export default function ResidentLayout() {
+  const pathname = usePathname();
+  const router = useRouter();
+  const careHome = useAuthStore((state) => state.careHome);
+  const role = useAuthStore((state) => state.user?.role);
+  const page = pathname.split('/').filter(Boolean).pop();
+  const allowed =
+    page === 'medication'
+      ? hasProduct(careHome, 'PENIEL_EMAR')
+      : page === 'report'
+        ? hasProduct(careHome, 'PENIELSENSE')
+        : page && !/^\w{24}$/.test(page)
+          ? hasProduct(careHome, 'PENIEL_CARE')
+          : hasProduct(careHome, 'PENIEL_CARE') ||
+            hasProduct(careHome, 'PENIELSENSE');
+
+  useEffect(() => {
+    if (!allowed) {
+      router.replace(
+        productLandingTab(careHome, isCareHomeManagerRole(role)),
+      );
+    }
+  }, [allowed, careHome, role, router]);
+
+  if (!allowed) return null;
+
   return (
     <Stack
       screenOptions={{

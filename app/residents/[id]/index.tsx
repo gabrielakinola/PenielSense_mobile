@@ -54,6 +54,7 @@ import {
 import { ResidentWorkspaceHeader } from "@/src/components/residents/ResidentWorkspaceHeader";
 import { useAuthStore } from "@/src/stores/auth-store";
 import { isCareHomeManagerRole } from "@/src/lib/care-home-home";
+import { hasProduct } from "@/src/lib/product-access";
 
 export default function ResidentDetailScreen() {
   const { id = "" } = useLocalSearchParams<{ id: string }>();
@@ -62,6 +63,14 @@ export default function ResidentDetailScreen() {
   const isManager = isCareHomeManagerRole(
     useAuthStore((state) => state.user?.role),
   );
+  const careHome = useAuthStore((state) => state.careHome);
+  const hasCare = hasProduct(careHome, "PENIEL_CARE");
+  const hasSense = hasProduct(careHome, "PENIELSENSE");
+  const hasEmar = hasProduct(careHome, "PENIEL_EMAR");
+  const hasIntelligence =
+    hasSense ||
+    careHome?.subscriptionPackage === "CARE_INTELLIGENCE" ||
+    careHome?.featureOverrides?.intelligence === true;
   const [tab, setTab] = useState<"timeline" | "about">("timeline");
   const [filter, setFilter] = useState<CareEntryCategory | "ALL">("ALL");
   const [actions, setActions] = useState(false);
@@ -74,27 +83,27 @@ export default function ResidentDetailScreen() {
   const profile = useQuery({
     queryKey: ["carehome", "resident-care-profile", id],
     queryFn: () => getResidentCareProfile(id),
-    enabled: !!id,
+    enabled: !!id && hasCare,
   });
   const brief = useQuery({
     queryKey: ["carehome", "care-brief", id],
     queryFn: () => getResidentCareBrief(id),
-    enabled: !!id,
+    enabled: !!id && hasIntelligence,
   });
   const notes = useQuery({
     queryKey: ["carehome", "care-entries", id, "timeline"],
     queryFn: () => getCareEntries(id, { limit: 100, page: 1 }),
-    enabled: !!id,
+    enabled: !!id && hasCare,
   });
   const tasks = useQuery({
     queryKey: ["carehome", "care-tasks", id],
     queryFn: () => getCareTasks({ residentId: id }),
-    enabled: !!id,
+    enabled: !!id && hasCare,
   });
   const operationalRecords = useQuery({
     queryKey: ["carehome", "operational-records", id],
     queryFn: () => getOperationalRecords({ residentId: id }),
-    enabled: !!id,
+    enabled: !!id && hasCare,
   });
   const timeline = useMemo(() => {
     const n = (notes.data?.items ?? []).flatMap((note) =>
@@ -248,6 +257,11 @@ export default function ResidentDetailScreen() {
       p?.capacitySummary || "Current decisions and authorisations",
     ],
   ] as const;
+  const visibleAbout = about.filter(([, label]) => {
+    if (label === "Medication and MAR") return hasEmar;
+    if (label === "Wellbeing reports") return hasSense;
+    return hasCare;
+  });
   return (
     <>
       <Stack.Screen options={{ title: name }} />
@@ -475,7 +489,7 @@ export default function ResidentDetailScreen() {
                       ) : null}
                     </View>
                   ) : null}
-                  {brief.data.statusTone !== "stable" ? (
+                  {hasSense && brief.data.statusTone !== "stable" ? (
                     <Pressable
                       onPress={() => router.push("/(tabs)/flags")}
                       style={{
@@ -494,7 +508,7 @@ export default function ResidentDetailScreen() {
                   ) : null}
                 </Card>
               ) : null}
-              <View
+              {hasCare ? <><View
                 style={{
                   flexDirection: "row",
                   flexWrap: "wrap",
@@ -675,11 +689,11 @@ export default function ResidentDetailScreen() {
                     No timeline entries for this filter.
                   </Text>
                 )}
-              </Card>
+              </Card></> : null}
             </>
           ) : (
             <View style={{ gap: 9 }}>
-              {about.map(([Icon, label, detail, route]) => (
+              {visibleAbout.map(([Icon, label, detail, route]) => (
                 <Pressable
                   key={label}
                   onPress={() => route && router.push(route as never)}
@@ -726,7 +740,7 @@ export default function ResidentDetailScreen() {
             </View>
           )}
         </ScreenContainer>
-        <Pressable
+        {hasCare ? <Pressable
           onPress={() => setActions(true)}
           accessibilityLabel="Record care"
           style={{
@@ -742,9 +756,9 @@ export default function ResidentDetailScreen() {
           }}
         >
           <CirclePlus size={30} color="#FFF" />
-        </Pressable>
+        </Pressable> : null}
       </View>
-      <Modal
+      {hasCare ? <Modal
         visible={actions}
         transparent
         animationType="slide"
@@ -808,7 +822,7 @@ export default function ResidentDetailScreen() {
             />
           </Pressable>
         </Pressable>
-      </Modal>
+      </Modal> : null}
     </>
   );
 }

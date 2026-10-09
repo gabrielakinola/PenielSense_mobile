@@ -1,3 +1,6 @@
+import type { CareHomeSummaryDto } from '@/src/types/auth.types';
+import { productLandingTab } from '@/src/lib/product-access';
+
 /** Admin / manager roles land on Today. Everyone else (carers) lands on residents. */
 export function isCareHomeManagerRole(role?: string | null): boolean {
   const normalized = (role ?? "").toUpperCase().replace(/-/g, "_");
@@ -9,8 +12,11 @@ export function isCareHomeManagerRole(role?: string | null): boolean {
   );
 }
 
-export function careHomeTabsHref(role?: string | null): "/(tabs)" | "/(tabs)/residents" {
-  return isCareHomeManagerRole(role) ? "/(tabs)" : "/(tabs)/residents";
+export function careHomeTabsHref(
+  role?: string | null,
+  careHome?: CareHomeSummaryDto | null,
+): '/(tabs)' | '/(tabs)/residents' | '/(tabs)/medications' | '/(tabs)/profile' {
+  return productLandingTab(careHome, isCareHomeManagerRole(role));
 }
 
 export const CARER_TAB_ORDER = [

@@ -69,6 +69,7 @@ export default function SplashScreen() {
   const hydrated = useAuthHydrated();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const role = useAuthStore((s) => s.user?.role);
+  const careHome = useAuthStore((s) => s.careHome);
   const palette = theme === 'dark' ? darkColors : lightColors;
   const startedAt = useRef(Date.now());
 
@@ -80,14 +81,14 @@ export default function SplashScreen() {
 
     const timer = setTimeout(() => {
       if (isAuthenticated) {
-        router.replace(careHomeTabsHref(role));
+        router.replace(careHomeTabsHref(role, careHome));
       } else {
         router.replace('/login');
       }
     }, remaining);
 
     return () => clearTimeout(timer);
-  }, [hydrated, isAuthenticated, role, router]);
+  }, [careHome, hydrated, isAuthenticated, role, router]);
 
   return (
     <View style={[styles.root, { backgroundColor: palette.background }]}>

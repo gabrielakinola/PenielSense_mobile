@@ -32,7 +32,22 @@ export interface CareHomeSummaryDto {
   packageName?: string;
 }
 
-export interface CareHomeLocationDto { id: string; name: string; locationCode?: string | null; city: string; status: string; active: boolean; }
+export interface CareHomeLocationDto {
+  id: string;
+  name: string;
+  locationCode?: string | null;
+  city: string;
+  status: string;
+  active: boolean;
+  timezone?: string;
+  enabledProducts?: CareHomeSummaryDto['enabledProducts'];
+  suspendedProducts?: CareHomeSummaryDto['suspendedProducts'];
+  subscriptionStatus?: CareHomeSummaryDto['subscriptionStatus'];
+  subscriptionPackage?: CareHomeSummaryDto['subscriptionPackage'];
+  packageName?: string;
+  subscriptionLimits?: { residents: number; staff: number; devices: number };
+  featureOverrides?: Record<string, boolean>;
+}
 
 export interface CareHomeLoginData {
   accessToken: string;

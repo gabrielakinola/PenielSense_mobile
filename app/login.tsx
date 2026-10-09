@@ -34,12 +34,13 @@ export default function LoginScreen() {
   const hydrated = useAuthHydrated();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const role = useAuthStore((s) => s.user?.role);
+  const careHome = useAuthStore((s) => s.careHome);
 
   useEffect(() => {
     if (hydrated && isAuthenticated) {
-      router.replace(careHomeTabsHref(role));
+      router.replace(careHomeTabsHref(role, careHome));
     }
-  }, [hydrated, isAuthenticated, role, router]);
+  }, [careHome, hydrated, isAuthenticated, role, router]);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -57,7 +58,8 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       await login(email, password);
-      router.replace(careHomeTabsHref(useAuthStore.getState().user?.role));
+      const state = useAuthStore.getState();
+      router.replace(careHomeTabsHref(state.user?.role, state.careHome));
     } catch (err) {
       setError(normalizeApiError(err));
     } finally {

@@ -14,6 +14,7 @@ import type {
   CareHomeUserDto,
   CareHomeLocationDto,
 } from '@/src/types/auth.types';
+import { activeProducts } from '@/src/lib/product-access';
 
 interface AuthState {
   isAuthenticated: boolean;
@@ -73,10 +74,11 @@ export const useAuthStore = create<AuthState>()(
           email: email.trim(),
           password,
         });
-        const careEnabled = data.careHome.enabledProducts?.includes('PENIEL_CARE') !== false;
-        const careSuspended = data.careHome.suspendedProducts?.includes('PENIEL_CARE') === true;
-        if (!careEnabled || careSuspended || ['PAUSED', 'CANCELLED'].includes(data.careHome.subscriptionStatus ?? '')) {
-          throw new Error('Peniel Care is not active for this organisation. Please contact your manager.');
+        if (
+          activeProducts(data.careHome).length === 0 ||
+          ['PAUSED', 'CANCELLED'].includes(data.careHome.subscriptionStatus ?? '')
+        ) {
+          throw new Error('No Peniel products are active for this organisation. Please contact your manager.');
         }
         await Promise.all([
           SecureStore.setItemAsync(ACCESS_TOKEN_KEY, data.accessToken, secureOptions),
@@ -99,7 +101,27 @@ export const useAuthStore = create<AuthState>()(
           SecureStore.setItemAsync(REFRESH_TOKEN_KEY, data.refreshToken, secureOptions),
         ]);
         setAccessToken(data.accessToken);
-        set((state) => ({ accessToken: data.accessToken, refreshToken: data.refreshToken, careHome: state.careHome ? { ...state.careHome, id: data.careHome.id, name: data.careHome.name, city: data.careHome.city } : null, locations: data.locations }));
+        set((state) => ({
+          accessToken: data.accessToken,
+          refreshToken: data.refreshToken,
+          careHome: state.careHome
+            ? {
+                ...state.careHome,
+                id: data.careHome.id,
+                name: data.careHome.name,
+                city: data.careHome.city,
+                timezone: data.careHome.timezone,
+                enabledProducts: data.careHome.enabledProducts,
+                suspendedProducts: data.careHome.suspendedProducts,
+                subscriptionStatus: data.careHome.subscriptionStatus,
+                subscriptionPackage: data.careHome.subscriptionPackage,
+                packageName: data.careHome.packageName,
+                limits: data.careHome.subscriptionLimits,
+                featureOverrides: data.careHome.featureOverrides,
+              }
+            : null,
+          locations: data.locations,
+        }));
       },
       logout: async () => {
         setAccessToken(null);
